@@ -1,0 +1,22 @@
+# S1 - Data & ML
+/src/data/            @JA-Codex
+/src/features/        @JA-Codex
+/src/models/          @JA-Codex
+/feature_repo/        @JA-Codex
+/frontend/            @Hashir-Rauf
+
+# S2 - MLOps & Automation
+/pipelines/           @Hashir-Rauf
+/.github/             @Hashir-Rauf
+/tests/               @JA-Codex
+/dvc.yaml             @JA-Codex
+/.dvc/config          @JA-Codex
+
+# S3 - Deployment & Reliability
+/src/serving/         @Hashir-Rauf
+/src/monitoring/      @Hashir-Rauf
+/docker/              @Hashir-Rauf
+/docker-compose*.yml  @Hashir-Rauf
+/k8s/                 @Hashir-Rauf
+/infra/               @Hashir-Rauf
+/monitoring/          @Hashir-Rauf
