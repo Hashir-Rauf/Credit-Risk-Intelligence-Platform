@@ -1,0 +1,219 @@
+# =============================================================================
+# Credit Risk Intelligence Platform - .gitignore
+# Rule of thumb: code, configs, dvc.yaml / *.dvc pointers, and lockfiles go in
+# git. Data, model binaries, secrets, caches and build output do not.
+# =============================================================================
+
+# ---- Secrets & credentials (NEVER commit) -----------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+secrets/
+*.secret
+*.secrets.yaml
+credentials
+credentials.json
+service-account*.json
+.aws/
+.kube/
+kubeconfig*
+*.kubeconfig
+# DVC remote credentials (the committed .dvc/config must hold no keys)
+.dvc/config.local
+
+# ---- Data (tracked by DVC, not git) -----------------------------------------
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+!data/**/.gitkeep
+*.csv
+*.parquet
+*.feather
+*.xls
+*.xlsx
+*.zip
+*.tar
+*.tar.gz
+*.gz
+*.sqlite
+*.sqlite3
+*.db
+# small test fixtures are allowed
+!tests/fixtures/**
+
+# ---- DVC internals ----------------------------------------------------------
+/.dvc/cache
+/.dvc/tmp
+/.dvc/plots
+dvc_plots/
+
+# ---- Models & ML artifacts (registered via MLflow / DVC) --------------------
+models/
+artifacts/
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.h5
+*.ckpt
+*.bin
+*.safetensors
+mlruns/
+mlartifacts/
+mlflow.db
+optuna*.db
+catboost_info/
+lightning_logs/
+wandb/
+reports/generated/
+evidently_workspace/
+# BentoML local store
+bentoml/
+# Feast local registry / online store
+feature_repo/data/
+feature_repo/*.db
+feature_repo/registry.db
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+develop-eggs/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit*.xml
+*.cover
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+# Notebooks are for exploration only; keep outputs out of git
+# (remove the next line if you decide to commit notebooks)
+# *.ipynb
+
+# ---- Airflow ----------------------------------------------------------------
+pipelines/airflow/logs/
+pipelines/airflow/plugins/__pycache__/
+pipelines/airflow/airflow.db
+pipelines/airflow/airflow.cfg
+pipelines/airflow/webserver_config.py
+pipelines/airflow/standalone_admin_password.txt
+pipelines/airflow/airflow-webserver.pid
+airflow/logs/
+airflow.db
+airflow.cfg
+unittests.cfg
+standalone_admin_password.txt
+
+# ---- Kubeflow / Kubernetes (compiled_pipeline.yaml IS committed) ------------
+*.tmp.yaml
+kind-config.local.yaml
+minikube*.log
+
+# ---- Docker / Compose -------------------------------------------------------
+docker-compose.override.yml
+*.local.yml
+.docker/
+# bind-mounted service data
+postgres-data/
+pgdata/
+grafana-data/
+prometheus-data/
+minio-data/
+
+# ---- Infrastructure as code (if Terraform is used) --------------------------
+.terraform/
+.terraform.lock.hcl.bak
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+crash.log
+*.tfplan
+
+# ---- Next.js frontend -------------------------------------------------------
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/.turbo/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.env*
+!frontend/.env.example
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---- Logs, temp, local outputs ----------------------------------------------
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+# load-test / drift-simulation outputs
+loadtest-results/
+*.hey.txt
+
+# ---- Editors / OS -----------------------------------------------------------
+.vscode/*
+!.vscode/settings.json.example
+!.vscode/extensions.json
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ---- Claude Code / local tooling --------------------------------------------
+.claude/settings.local.json
+graphify-out/
