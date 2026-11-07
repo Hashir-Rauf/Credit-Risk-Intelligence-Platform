@@ -110,10 +110,10 @@ Assumes ~8 weeks; compress or stretch as needed. Each phase ends with something 
 - [ ] Skeleton repo layout committed.
 
 ### Phase 1 — Data, DVC, DagsHub (week 1–2) · S1 + S2
-- [ ] `ingestion.py` pulls the dataset into `data/raw`; `validation.py` checks schema, types, nulls, ranges, invalid categories (e.g. `EDUCATION` ∈ {0..6}), duplicates.
+- [x] `ingestion.py` pulls the dataset into `data/raw`; `validation.py` checks schema, types, nulls, ranges, invalid categories (e.g. `EDUCATION` ∈ {0..6}), duplicates.
 - [ ] DVC init; remote = S3 bucket (primary) and DagsHub storage (secondary). `dvc.yaml` stages: `ingest → validate → preprocess → train → evaluate`.
-- [ ] **Reproducibility demo:** `git checkout <old commit> && dvc checkout` restores the matching dataset; script it.
-- [ ] **Merge-conflict doc:** deliberately create a conflicting `.dvc` file change on two branches, resolve, document steps in `docs/`.
+- [x] **Reproducibility demo:** `git checkout <old commit> && dvc checkout` restores the matching dataset; script it.
+- [x] **Merge-conflict doc:** deliberately create a conflicting `.dvc` file change on two branches, resolve, document steps in `docs/`.
 - [ ] Rubric hit: Git/DVC/DagsHub (9 marks).
 
 ### Phase 2 — Modelling, MLflow, Feast (week 2–3) · S1

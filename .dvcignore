@@ -1,0 +1,9 @@
+# Add patterns of files dvc should ignore, which could improve
+# the performance. Learn more at
+# https://dvc.org/doc/user-guide/dvcignore
+
+# Python bytecode and tool caches would change directory-dependency hashes (deps: src/common)
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

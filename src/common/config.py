@@ -11,17 +11,32 @@ import yaml
 from src.common.errors import ConfigError
 
 DEFAULT_PARAMS_FILE = "params.yaml"
-VALID_DATA_SOURCES = ("uci", "s3", "local")
+VALID_DATA_SOURCES = ("uci", "s3", "local", "synthetic")
+REQUIRED_DOMAINS = ("SEX", "EDUCATION", "MARRIAGE")
+REQUIRED_RANGES = ("LIMIT_BAL", "AGE", "PAY", "BILL_AMT", "PAY_AMT")
 
 REQUIRED_KEYS = (
     "seed",
     "data.source",
+    "data.uci_url",
+    "data.s3_uri_env",
+    "data.local_path",
+    "data.synthetic_rows",
     "data.raw_dir",
     "data.raw_filename",
+    "data.ingestion_report",
     "data.processed_dir",
     "data.id_column",
     "data.target_column",
     "data.timestamp_column",
+    "smoke.n_rows",
+    "smoke.data_dir",
+    "validation.report_path",
+    "validation.min_rows",
+    "validation.target_rate_bounds",
+    "validation.domains",
+    "validation.ranges",
+    "validation.undocumented_codes",
     "split.train",
     "split.val",
     "split.test",
@@ -130,8 +145,54 @@ def validate_params(params: dict[str, Any]) -> None:
     if challenger == champion:
         errors.append("mlflow.challenger_alias and mlflow.champion_alias must differ")
 
+    _validate_data_and_validation_sections(params, errors)
+
     if errors:
         raise ConfigError("; ".join(errors))
+
+
+def _is_pair(value: Any, *, lo_hi_order: bool = True) -> bool:
+    ok = isinstance(value, list) and len(value) == 2 and all(_is_number(v) for v in value)
+    return ok and (not lo_hi_order or value[0] <= value[1])
+
+
+def _validate_data_and_validation_sections(params: dict[str, Any], errors: list[str]) -> None:
+    """Checks for the data ingestion / validation settings added in Cycle 1."""
+    url = get_param(params, "data.uci_url")
+    if not (isinstance(url, str) and url.startswith("https://")):
+        errors.append("data.uci_url must be an https:// URL")
+
+    for key in ("data.synthetic_rows", "smoke.n_rows", "validation.min_rows"):
+        value = get_param(params, key)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            errors.append(f"{key} must be a positive integer")
+
+    bounds = get_param(params, "validation.target_rate_bounds")
+    if not (_is_pair(bounds) and 0 < bounds[0] < bounds[1] < 1):
+        errors.append("validation.target_rate_bounds must be [low, high] with 0 < low < high < 1")
+
+    domains = get_param(params, "validation.domains")
+    if not isinstance(domains, dict):
+        errors.append("validation.domains must be a mapping of column -> allowed values")
+    else:
+        for col in REQUIRED_DOMAINS:
+            allowed = domains.get(col)
+            if not (isinstance(allowed, list) and allowed):
+                errors.append(f"validation.domains.{col} must be a non-empty list")
+
+    ranges = get_param(params, "validation.ranges")
+    if not isinstance(ranges, dict):
+        errors.append("validation.ranges must be a mapping of column -> [min, max]")
+    else:
+        for col in REQUIRED_RANGES:
+            if not _is_pair(ranges.get(col)):
+                errors.append(f"validation.ranges.{col} must be [min, max] with min <= max")
+
+    undocumented = get_param(params, "validation.undocumented_codes")
+    if not (
+        isinstance(undocumented, dict) and all(isinstance(v, list) for v in undocumented.values())
+    ):
+        errors.append("validation.undocumented_codes must be a mapping of column -> list of codes")
 
 
 def load_params(path: str | Path | None = None) -> dict[str, Any]:

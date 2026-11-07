@@ -26,7 +26,7 @@ from src.common.config import (
     resolve_path,
     validate_params,
 )
-from src.common.errors import ConfigError, DataValidationError, GateFailedError
+from src.common.errors import ConfigError, DataValidationError, GateFailedError, IngestionError
 from src.common.logging_utils import configure_logging
 from src.common.seed import derive_seed, make_rng, set_global_seed
 
@@ -212,6 +212,7 @@ class TestStageMain:
             (DataValidationError("bad rows", {"n": 3}), ExitCode.VALIDATION_FAILED),
             (GateFailedError("auc 0.6 < 0.75"), ExitCode.GATE_FAILED),
             (ConfigError("oops"), ExitCode.ERROR),
+            (IngestionError("download failed"), ExitCode.ERROR),
             (RuntimeError("boom"), ExitCode.ERROR),
         ],
     )

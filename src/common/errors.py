@@ -13,6 +13,10 @@ class ConfigError(PipelineError):
     """params.yaml / config file is missing, malformed or has invalid values."""
 
 
+class IngestionError(PipelineError):
+    """Raw data could not be fetched or read (network, S3, missing/corrupt source file)."""
+
+
 class DataValidationError(PipelineError):
     """Input data failed schema or quality validation (pipeline must stop)."""
 

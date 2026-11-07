@@ -15,6 +15,9 @@ select = ["E", "F", "I", "B", "UP"]
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "integration: slower tests that run real subprocesses (git, dvc)",
+]
 
 [tool.coverage.run]
 source = ["src"]

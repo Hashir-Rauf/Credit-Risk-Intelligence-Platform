@@ -56,6 +56,7 @@ Not everything exists yet. Check `memory.md` for what is built, and don't assume
 dvc repro                         # run data → train → evaluate pipeline
 dvc pull / dvc push               # sync data with remote
 pytest -q                         # all tests
+python -m src.data.ingestion --smoke && python -m src.data.validation --smoke   # synthetic smoke run (only touches data/smoke)
 ruff check . && black --check .   # lint / format
 docker compose up --build         # api + mlflow + postgres + prometheus + grafana (+ frontend)
 make help                         # preferred wrapper for the above once a Makefile exists

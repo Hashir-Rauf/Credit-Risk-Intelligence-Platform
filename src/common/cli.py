@@ -19,7 +19,7 @@ from enum import IntEnum
 from typing import Any
 
 from src.common.config import load_params
-from src.common.errors import ConfigError, DataValidationError, GateFailedError
+from src.common.errors import ConfigError, DataValidationError, GateFailedError, PipelineError
 from src.common.logging_utils import configure_logging, get_logger
 from src.common.seed import set_global_seed
 
@@ -71,6 +71,9 @@ def stage_main(run_fn: RunFn, *, description: str, argv: Sequence[str] | None = 
         return int(ExitCode.GATE_FAILED)
     except ConfigError as exc:
         log.error("configuration error: %s", exc)
+        return int(ExitCode.ERROR)
+    except PipelineError as exc:
+        log.error("%s: %s", type(exc).__name__, exc)
         return int(ExitCode.ERROR)
     except Exception:
         log.exception("stage crashed")

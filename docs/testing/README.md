@@ -5,13 +5,15 @@ Each cycle ships `docs/testing/cycle-N.md` with: scope, how to run, what each te
 | Cycle | Doc | Status |
 |---|---|---|
 | 0 | [cycle-0.md](cycle-0.md) | Automated tests pass (Linux, Python 3.11) |
-| 1 | cycle-1.md | Not started |
+| 1 | [cycle-1.md](cycle-1.md) | Automated tests pass; real-UCI manual check pending |
+| 2 | cycle-2.md | Not started |
 
 ## Standard commands
 ```
 pip install -r requirements-dev.txt
 ruff check . && black --check .
 pytest -q                                   # all tests
+pytest -q -m "not integration"              # skip real git/dvc subprocess tests
 pytest -q --cov=src --cov-report=term-missing
 pytest -q -k <keyword>                      # one area
 ```

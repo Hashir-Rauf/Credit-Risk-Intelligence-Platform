@@ -1,0 +1,37 @@
+# DVC pipeline. One owner for this file (@JA-Codex, per CODEOWNERS) to avoid merge conflicts.
+# Later cycles append: preprocess -> train -> evaluate. Parameters come from params.yaml.
+# Data versions are recorded in dvc.lock (commit it); the data itself lives in the DVC remote.
+stages:
+  ingest:
+    cmd: python -m src.data.ingestion
+    deps:
+      - src/common
+      - src/data/ingestion.py
+      - src/data/paths.py
+      - src/data/schema.py
+      - src/data/synthetic.py
+    params:
+      - seed
+      - data
+    outs:
+      - data/raw/default_credit_card.csv
+      - reports/ingestion_report.json:
+          cache: false
+
+  validate:
+    cmd: python -m src.data.validation
+    deps:
+      - src/common
+      - src/data/validation.py
+      - src/data/paths.py
+      - src/data/schema.py
+      - data/raw/default_credit_card.csv
+    params:
+      - data.raw_dir
+      - data.raw_filename
+      - data.id_column
+      - data.target_column
+      - validation
+    outs:
+      - reports/validation_report.json:
+          cache: false

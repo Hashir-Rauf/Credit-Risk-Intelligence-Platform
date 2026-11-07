@@ -3,20 +3,57 @@
 # Config over constants (agents.md): thresholds, seeds and paths live here, never inline.
 # Validated on load by src/common/config.py. Contract: docs/contracts-s1.md
 
-# All randomness (split, tuning, models) is derived from this value.
+# All randomness (split, tuning, models, synthetic data) is derived from this value.
 seed: 42
 
 data:
-  source: uci # uci | s3 | local
+  # uci: download the UCI zip | s3: object named by the env var below | local: file at local_path
+  # synthetic: generated stand-in data for demos and tests ONLY (never for reported results)
+  source: uci
   uci_dataset_id: 350 # UCI "Default of Credit Card Clients"
+  uci_url: https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+  s3_uri_env: RAW_DATA_S3_URI # NAME of the env var holding s3://bucket/key (value never committed)
+  local_path: data/external/default_credit_card_source.xls # used when source: local (.csv or .xls)
+  synthetic_rows: 30000 # used when source: synthetic
   raw_dir: data/raw
   raw_filename: default_credit_card.csv
+  ingestion_report: reports/ingestion_report.json
   processed_dir: data/processed
   id_column: ID # Feast entity key (customer_id in feature views)
   target_column: default_next_month
   # UCI is a single snapshot with no row timestamps. Feast needs one, so Cycle 4 assigns a
   # SYNTHETIC event timestamp. Anything derived from it is simulated and must be labelled so.
   timestamp_column: event_timestamp
+
+# `--smoke` runs (CI, quick tests) always use synthetic data under smoke.data_dir so they can
+# never overwrite DVC-tracked data/raw or reports/.
+smoke:
+  n_rows: 2000
+  data_dir: data/smoke
+
+validation:
+  report_path: reports/validation_report.json
+  min_rows: 1000
+  # Hard failure if the share of defaults falls outside this range (UCI is ~22%).
+  target_rate_bounds: [0.05, 0.60]
+  # Allowed values; anything else is a hard failure (pipeline stops, exit code 2).
+  domains:
+    SEX: [1, 2]
+    EDUCATION: [0, 1, 2, 3, 4, 5, 6]
+    MARRIAGE: [0, 1, 2, 3]
+  # Inclusive [min, max]. PAY applies to PAY_1..PAY_6, BILL_AMT to BILL_AMT1..6, PAY_AMT to PAY_AMT1..6.
+  ranges:
+    LIMIT_BAL: [1, 10000000]
+    AGE: [18, 100]
+    PAY: [-2, 9]
+    BILL_AMT: [-10000000, 10000000]
+    PAY_AMT: [0, 10000000]
+  # Present in the real UCI data but missing from its data dictionary. Valid, so they only
+  # raise warnings (counted in the report), never failures.
+  undocumented_codes:
+    EDUCATION: [0, 5, 6]
+    MARRIAGE: [0]
+    PAY: [-2, 0]
 
 split:
   train: 0.70
