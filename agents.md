@@ -39,9 +39,9 @@ docs/           diagrams, risk assessment, demo script
 Not everything exists yet. Check `memory.md` for what is built, and don't assume a file is present.
 
 ## Team ownership (anyone may edit anything, but ask the owner before large changes)
-- **S1 — Data & ML:** data, validation, features, Feast, training/tuning/eval, MLflow, fairness, frontend.
-- **S2 — MLOps & Automation:** Git/DVC/DagsHub, Airflow, Kubeflow, pytest, CI/CD, security scanning.
-- **S3 — Deployment & Reliability:** Flask API, BentoML, Docker/Compose, Kubernetes, AWS, monitoring.
+- **S1 — Data & ML:** data, validation, features, Feast, training/tuning/eval, MLflow, fairness, tests (data/features/model/regression), `dvc.yaml`. CODEOWNERS is authoritative where it differs from this list.
+- **S2 — MLOps & Automation:** Git/GitHub, DagsHub, Airflow, Kubeflow, CI/CD, security scanning.
+- **S3 — Deployment & Reliability:** Flask API, BentoML, Docker/Compose, Kubernetes, AWS, monitoring, frontend.
 
 ## How to work here
 1. **Read before writing.** Check the existing module, config and tests for the area you're touching.

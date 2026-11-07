@@ -1,0 +1,7 @@
+# Runtime dependencies for the S1 (data / ML) modules. Pinned (rules.md §3).
+# Python 3.11 is the target runtime.
+# Extended cycle by cycle: pandera (C1), scikit-learn + mlflow (C2), optuna + boosted
+# trees (C3), feast (C4), fairlearn (C5). Pins are reconciled when each lands.
+numpy==2.4.6
+pandas==3.1.1
+PyYAML==6.0.3

@@ -1,0 +1,15 @@
+# Pipeline / infrastructure wiring. Environment variable NAMES only; values are injected at
+# runtime (rules.md §1). S2/S3 extend this file for Airflow, KFP and AWS settings.
+env_vars:
+  mlflow_tracking_uri: MLFLOW_TRACKING_URI
+  mlflow_tracking_username: MLFLOW_TRACKING_USERNAME
+  mlflow_tracking_password: MLFLOW_TRACKING_PASSWORD
+  raw_data_s3_uri: RAW_DATA_S3_URI
+  log_level: LOG_LEVEL
+
+# Process exit codes returned by every S1 stage CLI. Airflow/KFP branch on these.
+exit_codes:
+  ok: 0
+  error: 1
+  validation_failed: 2
+  gate_failed: 3

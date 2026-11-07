@@ -13,7 +13,7 @@ End-to-end MLOps system that predicts the probability a credit-card customer def
 
 | Decision | Choice | Why |
 |---|---|---|
-| Dataset | **UCI Default of Credit Card Clients** (30k rows, 23 features, CC BY 4.0) | Small, so training and CI are cheap; licence is clear; has `ID` (Feast entity) and sensitive attributes (`SEX`, `AGE`, `MARRIAGE`) for the fairness/ethics section; time-ordered monthly columns make drift simulation easy. Stretch: Home Credit for a bigger run. |
+| Dataset | **UCI Default of Credit Card Clients** (30k rows, 23 features, CC BY 4.0) | Small, so training and CI are cheap; licence is clear; has `ID` (Feast entity) and sensitive attributes (`SEX`, `AGE`, `MARRIAGE`) for the fairness/ethics section; the monthly `PAY_*`/`BILL_AMT*` columns are per-customer history, not row timestamps, so drift is simulated by injecting shifts into synthetic batches. Stretch: Home Credit for a bigger run. |
 | Models | Logistic Regression (baseline), Random Forest, XGBoost/LightGBM | Gives a real experiment comparison in MLflow with tuning (Optuna). |
 | Primary metric | **ROC-AUC** and **PR-AUC**, plus recall at a fixed threshold | Class imbalance (~22% default). Gate: AUC ≥ 0.75 (tune after baseline). |
 | Serving | Flask (gunicorn) REST API. BentoML packaging is optional but is in the rubric (§8 of spec), so add a Bento build step | Spec mandates Flask. Note: the spec's repo tree says FastAPI, the text says Flask. **Use Flask**. |
@@ -57,7 +57,7 @@ Manual gates: promotion to Production, rollback, and any retrain whose candidate
 
 | Student | Area | Owns |
 |---|---|---|
-| **S1 — Data & ML** | Data and modelling | Dataset + licence check, cleaning, validation schema (Pandera/Great Expectations), feature engineering, Feast repo, training/tuning/evaluation modules, DVC data versioning, MLflow experiments, fairness analysis, **Next.js frontend** |
+| **S1 — Data & ML** | Data and modelling | Dataset + licence check, cleaning, validation schema (Pandera/Great Expectations), feature engineering, Feast repo, training/tuning/evaluation modules, DVC data versioning, MLflow experiments, fairness analysis, tests for data/features/models/regression, `dvc.yaml` (per CODEOWNERS) |
 | **S2 — MLOps & Automation** | Pipelines and CI/CD | GitHub workflow + branch protection, DagsHub, DVC pipeline (`dvc.yaml`), Airflow DAGs, Kubeflow components/pipeline, pytest suite, GitHub Actions CI/CD, security scanning |
 | **S3 — Deployment & Reliability** | Serving and infra | Flask API, BentoML, Dockerfiles, Compose, Kubernetes manifests + scaling demo, AWS (ECR/ECS/S3/IAM/CloudWatch/budget), Prometheus/Grafana, Evidently monitoring, alerts |
 
@@ -119,8 +119,8 @@ Assumes ~8 weeks; compress or stretch as needed. Each phase ends with something 
 ### Phase 2 — Modelling, MLflow, Feast (week 2–3) · S1
 - [ ] Modular `preprocessing.py` (sklearn `ColumnTransformer`, no leakage; train-only fit), engineered features (utilisation ratio, payment delay stats, bill/pay ratios).
 - [ ] `train.py`, `tune.py` (Optuna, ≥ 20 trials on 2–3 model families), `evaluate.py` (AUC, PR-AUC, recall/precision at threshold, KS, calibration plot, confusion matrix).
-- [ ] MLflow logging per run: algorithm, params, **DVC data hash**, **git commit SHA**, metrics, duration, plots, model artifact. Point tracking URI to DagsHub.
-- [ ] Comparison table + written justification of the selected model. Register in MLflow Model Registry (`Staging` → `Production` via aliases).
+- [ ] MLflow logging per run: algorithm, params, **DVC data hash**, **git commit SHA**, **Feast repo commit** (spec §12.1), metrics, duration, plots, model artifact. Point tracking URI to DagsHub.
+- [ ] Comparison table + written justification of the selected model. Register in MLflow Model Registry; promotion moves aliases `challenger` → `champion` (stages are deprecated; no `Production` alias).
 - [ ] Feast: entity `customer_id`, feature views (payment history, billing, demographics-sans-sensitive), offline retrieval for training, online retrieval for serving, feature-quality validation (freshness/null checks).
 - [ ] Fairness: compare AUC/approval rate across `SEX`, age bands; decide whether sensitive attributes are excluded from the model and document it.
 - [ ] Rubric hit: MLflow (9) + Feast (6).
@@ -137,7 +137,7 @@ Assumes ~8 weeks; compress or stretch as needed. Each phase ends with something 
 - [ ] `docker-compose.yml`: api, mlflow, postgres, prometheus, grafana (separate `dev` / `prod` override files).
 - [ ] BentoML: build a Bento from the registered model; document how it relates to the Flask API (e.g. Bento as the packaging/runner layer or alternate serving path).
 - [ ] Run the container on a second machine (teammate laptop) and record it.
-- [ ] **Next.js frontend** (`frontend/`, optional for marks, valuable for the demo; owner S1, S3 reviews):
+- [ ] **Next.js frontend** (`frontend/`, optional for marks, valuable for the demo; owner Hashir-Rauf per CODEOWNERS, S1 reviews):
   - Pages: Score applicant (form, presets, probability gauge, risk band, SHAP top factors, model version), Model & data (`/model-info`), Monitoring (Grafana/Evidently/MLflow links + "simulate drift" button), Admin (champion vs. challenger, promote/rollback via GitHub `workflow_dispatch`).
   - Security: browser only calls Next route handlers; handlers attach the API key from env and forward to Flask. No key in client JS, no CORS needed, no raw inputs logged, "not a real lending decision" disclaimer.
   - Packaging: `frontend/Dockerfile` (multi-stage, standalone output, non-root); added to Compose and K8s. AWS deployment optional (second Fargate service) only if time/cost allow.
@@ -171,7 +171,7 @@ Assumes ~8 weeks; compress or stretch as needed. Each phase ends with something 
 
 ### Phase 8 — Monitoring and automated retraining (week 6–7) · S3 + S1 + S2
 - [ ] Prometheus scrapes the API; Grafana dashboard: request rate, error rate, p50/p95 latency, health, predictions by model version, score distribution, drift score, data-quality failures, container CPU/mem.
-- [ ] Prediction log store (hashed/pseudonymised inputs + score + model_version) to S3/SQLite; labels joined later (UCI has ground truth, so **simulate delayed labels** by replaying held-out months).
+- [ ] Prediction log store (hashed/pseudonymised inputs + score + model_version) to S3/SQLite; labels joined later (UCI has ground truth, so **simulate delayed labels** by replaying held-out synthetic batches, labelled simulated).
 - [ ] Evidently job: data-quality + drift (PSI/KS) reference vs. current; emits JSON/HTML report + Prometheus gauge. Performance-when-labels-arrive report.
 - [ ] Alerts (Grafana/Prometheus Alertmanager): error rate > 5 % for 5 min, p95 latency > 500 ms, drift share > 30 %. Capture evidence by triggering each on purpose.
 - [ ] `retrain_dag`: triggers = weekly schedule **or** drift/performance threshold breached → revalidate data → run KFP → evaluate challenger vs. champion on the same holdout (predefined rule, e.g. AUC +0.5 pt and no fairness regression) → if better, register as Staging and request approval; else discard and log.

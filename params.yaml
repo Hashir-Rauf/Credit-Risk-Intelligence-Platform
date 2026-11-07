@@ -1,0 +1,42 @@
+# Single source of truth for S1 stages (data -> features -> train -> evaluate).
+# DVC reads this file (dvc.yaml `params:`) so changing a value re-runs the dependent stages.
+# Config over constants (agents.md): thresholds, seeds and paths live here, never inline.
+# Validated on load by src/common/config.py. Contract: docs/contracts-s1.md
+
+# All randomness (split, tuning, models) is derived from this value.
+seed: 42
+
+data:
+  source: uci # uci | s3 | local
+  uci_dataset_id: 350 # UCI "Default of Credit Card Clients"
+  raw_dir: data/raw
+  raw_filename: default_credit_card.csv
+  processed_dir: data/processed
+  id_column: ID # Feast entity key (customer_id in feature views)
+  target_column: default_next_month
+  # UCI is a single snapshot with no row timestamps. Feast needs one, so Cycle 4 assigns a
+  # SYNTHETIC event timestamp. Anything derived from it is simulated and must be labelled so.
+  timestamp_column: event_timestamp
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+
+features:
+  # Excluded from model inputs, kept only for fairness reporting (rules.md §2).
+  sensitive_columns: [SEX, MARRIAGE, AGE]
+  exclude_sensitive_from_model: true
+
+gate:
+  # Minimum test ROC-AUC for a model to proceed (rules.md §5). Re-baseline after Cycle 2;
+  # never lower it just to make a run pass.
+  roc_auc_min: 0.75
+
+mlflow:
+  experiment_name: credit-risk-default
+  tracking_uri_env: MLFLOW_TRACKING_URI # name of the env var; the value is never committed
+  registry_model_name: credit-risk-default-model
+  # MLflow stages are deprecated; promotion = moving an alias. "Production" is not used.
+  challenger_alias: challenger
+  champion_alias: champion
