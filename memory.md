@@ -26,7 +26,9 @@ _Last updated: 2026-11-08_
 - Professor approved: Hugging Face, BentoML, Feast, Flask API, Kubeflow.
 - Still unconfirmed: AWS spend limit itself (budget alerts exist).
 
-## Phase 1 progress (2026-11-08, branch `feat/phase-1-data-dvc`, NOT committed yet)
+## Phase 1 UPDATE (later 2026-11-08): all [H] items DONE and committed on `feat/phase-1-data-dvc` (authored Hashir Rauf <hashirpriv04@gmail.com>, no AI attribution). Data versions: v1 30,000 rows md5 a7e80c90..; v2 (`835412d`, dedupe) 29,965 rows md5 22e7b58a..; merged-conflict demo 29,620 rows. Repro demo and merge-conflict exercise run; evidence in `docs/evidence/phase-1/` (README index). Found and fixed: `.gitignore` `models/` rule was hiding `src/models/` (now `/models/`); `*.log` ignored evidence (now excepted). Open: DagsHub data-view screenshot (manual; DagsHub repo is standalone, not a GitHub mirror), PR must be opened by the user (no `gh`), JA-Codex reviews. Account ID scrubbed from memory.md (public repo) but `.dvc/config` still contains the bucket name.
+
+## Phase 1 progress (2026-11-08, earlier notes)
 Done: `params.yaml`, `src/data/ingestion.py` (pinned zip SHA-256, deterministic CSV, columns renamed `customer_id`, `PAY_1`, `default`), `src/data/validation.py` (pandera, structured report, raises), `tests/test_data.py` (20 pass) + fixtures (`credit_sample.csv`, `credit_corrupt.csv`), `dvc init`, remotes `s3` (default) and `dagshub` (creds in gitignored `.dvc/config.local`), `dvc.yaml` (ingest -> validate), `dvc push` to both remotes, `scripts/repro_demo.sh`, README data section. Fresh-copy `dvc pull` verified (same MD5). `.venv` created locally (not committed).
 Data facts: 30,000 rows, default rate 22.12%, no nulls/dupe IDs; `EDUCATION` has 0/5/6 and `MARRIAGE` 0 (allowed, handle in preprocessing); 35 duplicate rows excluding ID (kept).
 Remaining Phase 1: EDA notebook (`notebooks/`), run `scripts/repro_demo.sh` once there are 2 data commits, merge-conflict exercise + `docs/dvc-merge-conflicts.md`, evidence in `docs/evidence/phase-1/`, commit + PR. DVC needs `botocore[crt]` for `aws login` creds (added to requirements).

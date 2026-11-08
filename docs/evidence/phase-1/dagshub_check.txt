@@ -1,0 +1,5 @@
+# DagsHub check - 2026-11-08T08:16:29Z (token not shown)
+repo: Hashir-Rauf/Credit-Risk-Intelligence-System  private=False  mirror=False  default_branch=main
+DVC remote 'dagshub': 'dvc push -r dagshub' -> '1 file pushed' for data v1, v2 and the merged version; 'dvc status -c -r dagshub' -> in sync (see dvc_remotes_status.txt)
+MLflow endpoint https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.mlflow authenticates (HTTP 200)
+NOT captured: web UI screenshot (needs a logged-in browser). See README.md in this folder.

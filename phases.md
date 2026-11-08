@@ -62,26 +62,26 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 **Goal:** versioned, validated data, and a proven way to recover any past data/code pair. **Owners:** S1 (data), S2 (DVC/Git). **Prereq:** Phase 0.
 
 **Steps**
-1. **[H] ✅** `src/data/ingestion.py` downloads UCI data into `data/raw/` (checksum-verified, idempotent). README has the data section; **🟡 add an explicit licence/citation line (CC BY 4.0, Yeh 2009) if not already clear.**
+1. **[H] ✅** `src/data/ingestion.py` downloads UCI data into `data/raw/` (checksum-verified, idempotent). README has the data section with the CC BY 4.0 licence and Yeh 2009 citation.
 2. **[J] ⬜** exploratory notebook in `notebooks/` (not used by the pipeline): class balance, value ranges, odd categories (`EDUCATION` 0/5/6, `MARRIAGE` 0), the `PAY_*` coding. Listed in `docs/HANDOFF-JA-Codex.md`.
 3. **[H] ✅** `src/data/validation.py` (Pandera) with schema/dtypes, non-null, ranges, allowed categories, duplicate IDs, target in {0,1}; structured report, raises on failure.
 4. **[H] ✅** `dvc init`; remotes `s3` (default) and `dagshub`; credentials only in `.dvc/config.local`.
 5. **[H] 🟡** `dvc.yaml` has `ingest → validate` with `params.yaml` and a metrics output. `preprocess → train → evaluate` stages are added after **[J]** writes the code (Hashir owns `dvc.yaml`).
 6. **[H] ✅** `data/raw` is the `ingest` output; `dvc.lock` written; `dvc push` done to both remotes (verified in sync).
-7. **[H] 🟡** `scripts/repro_demo.sh` is written. **Not yet run**: needs two commits with different data/`dvc.lock`, then capture the log.
-8. **[H] ⬜** Merge-conflict exercise: two branches modify the data/`dvc.lock`; merge, resolve (take both, re-run `dvc repro`, commit); write `docs/dvc-merge-conflicts.md`.
+7. **[H] ✅** `scripts/repro_demo.sh` run against data v2 (`835412d`) and back; hashes match. Log: `docs/evidence/phase-1/repro_demo.log`.
+8. **[H] ✅** Merge-conflict exercise done (conflict in `dvc.lock`, `params.yaml`, report; resolved with `dvc repro`). Write-up: `docs/dvc-merge-conflicts.md`; transcript in evidence.
 9. **[H] ✅** `tests/test_data.py` (20 tests) with a corrupt fixture that must fail validation.
 
 **Deliverables:** ingestion + validation modules, DVC pipeline, two remotes, repro script, merge-conflict doc.
 **Exit criteria**
 - [x] `dvc repro` runs from a fresh clone after `dvc pull` (checked in a clean copy; identical MD5). **[H]**
-- [ ] Repro demo restores the earlier data byte-for-byte (hashes match). **[H]**
+- [x] Repro demo restores the earlier data byte-for-byte (hashes match). **[H]**
 - [x] Corrupt data fails validation with a clear message. **[H]**
 - [x] No data file is tracked by git (only small test fixtures). **[H]**
 
-**Evidence (all [H], save in `docs/evidence/phase-1/`):** ⬜ terminal log of the repro demo, ⬜ `dvc dag` output, ⬜ DagsHub data view screenshot, ⬜ conflict-resolution write-up.
+**Evidence (all [H], in `docs/evidence/phase-1/`, index in its README.md):** ✅ repro demo log, ✅ `dvc dag` output, ✅ conflict-resolution write-up and transcript, ✅ validation fail/pass log, ✅ tests/lint log, ✅ remote status; ⬜ DagsHub data view screenshot (needs a logged-in browser; steps in the evidence README).
 
-**Phase 1 status:** work is on branch `feat/phase-1-data-dvc`, not yet committed or merged. Hashir's remaining: items 7 and 8, the evidence, the licence line, then commit + PR (reviewer: JA-Codex).
+**Phase 1 status:** all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: the DagsHub screenshot, and [J]'s EDA notebook (item 2).
 
 ---
 
