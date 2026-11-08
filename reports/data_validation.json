@@ -1,7 +1,7 @@
 {
   "passed": true,
-  "n_rows": 29965,
+  "n_rows": 30000,
   "n_columns": 25,
   "failures": [],
-  "default_rate": 0.2213
+  "default_rate": 0.2212
 }
