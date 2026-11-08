@@ -1,0 +1,119 @@
+# DVC merge-conflict exercise - 2026-11-08T08:13:52Z
+# base: feat/phase-1-data-dvc @ 99261fc (data v1, 30000 rows)
+
+$ git checkout -b exp/dedupe  &&  set data.drop_duplicate_rows=true  &&  dvc repro  &&  git commit
+-> 9d816b3
+
+$ git checkout feat/phase-1-data-dvc && git checkout -b exp/clean-education  &&  set data.drop_unknown_education=true  &&  dvc repro  &&  git commit
+INFO Wrote 29655 rows x 25 cols to data\raw\credit_default.csv (sha256 228f06660ceb70326af651312f3dfa0e8a8b5cfa37a065fb4d7b179ed9ad1225)
+INFO Validation passed: 29655 rows, default rate 0.2229
+-> 9e459f1
+
+$ git checkout exp/dedupe && git merge exp/clean-education
+Auto-merging dvc.lock
+CONFLICT (content): Merge conflict in dvc.lock
+Auto-merging params.yaml
+CONFLICT (content): Merge conflict in params.yaml
+Auto-merging reports/data_validation.json
+CONFLICT (content): Merge conflict in reports/data_validation.json
+Automatic merge failed; fix conflicts and then commit the result.
+merge exit: 1
+
+$ git status --short   (conflicted files = "UU")
+UU dvc.lock
+UU params.yaml
+UU reports/data_validation.json
+
+$ git diff --name-only --diff-filter=U
+dvc.lock
+params.yaml
+reports/data_validation.json
+
+$ git diff dvc.lock   (conflict markers)
+diff --cc dvc.lock
+index cf13507,6370668..0000000
+--- a/dvc.lock
++++ b/dvc.lock
+@@@ -9,8 -9,8 +9,13 @@@ stages
+        size: 3575
+      params:
+        params.yaml:
+++<<<<<<< HEAD
+ +        data.drop_duplicate_rows: true
+ +        data.drop_unknown_education: false
+++=======
++         data.drop_duplicate_rows: false
++         data.drop_unknown_education: true
+++>>>>>>> exp/clean-education
+          data.excel_name: default of credit card clients.xls
+          data.raw_path: data/raw/credit_default.csv
+          data.source_sha256: 
+@@@ -20,15 -20,15 +25,25 @@@
+      outs:
+      - path: data/raw/credit_default.csv
+        hash: md5
+++<<<<<<< HEAD
+ +      md5: 22e7b58a25ebb97573c8999aa4b7ef50
+ +      size: 2864802
+++=======
++       md5: b3d3fe7bc1038beb93c705baa42ecdd7
++       size: 2833941
+++>>>>>>> exp/clean-education
+    validate:
+      cmd: python -m src.data.validation
+      deps:
+      - path: data/raw/credit_default.csv
+        hash: md5
+++<<<<<<< HEAD
+ +      md5: 22e7b58a25ebb97573c8999aa4b7ef50
+ +      size: 2864802
+++=======
++       md5: b3d3fe7bc1038beb93c705baa42ecdd7
++       size: 2833941
+
+# ---- RESOLUTION ----
+$ # 1. params.yaml is hand-written config: keep BOTH changes
+# Pipeline parameters (read by DVC stages and src/). Keep seeds and thresholds here.
+data:
+  source_url: https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+  # SHA-256 of the downloaded zip; ingestion fails if the download does not match.
+  source_sha256: 56c885f84457f6680f8438f02bfcdac9579323d8a94465ee5f26e32baa727602
+  excel_name: default of credit card clients.xls
+  raw_path: data/raw/credit_default.csv
+  validation_report: reports/data_validation.json
+  # Optional row filters (off by default; see src/data/ingestion.py)
+  drop_duplicate_rows: true
+  drop_unknown_education: true
+
+seed: 42
+
+$ # 2. dvc.lock and reports/*.json are GENERATED: take one side, never hand-merge hashes
+Updated 2 paths from the index
+(took 'ours' for both)
+$ dvc repro   # regenerates dvc.lock + report from the merged params
+Running stage 'ingest':
+INFO Wrote 29620 rows x 25 cols to data\raw\credit_default.csv (sha256 846394a44b26f94672e51ed86b5bc8c8a08e90061b45bfbfd81936c6b7b84b52)
+Updating lock file 'dvc.lock'
+Running stage 'validate':
+INFO Validation passed: 29620 rows, default rate 0.223
+Updating lock file 'dvc.lock'
+$ git diff --check / grep conflict markers
+no conflict markers left
+$ dvc push -r s3 ; dvc push -r dagshub
+1 file pushed
+1 file pushed
+$ git log --oneline --graph
+*   35229a8 Merge exp/clean-education into exp/dedupe (resolved dvc.lock via dvc repro)
+|\  
+| * 9e459f1 exp: drop unknown education
+* | 9d816b3 exp: dedupe rows
+|/  
+* 99261fc data: back to v1 (drop_duplicate_rows=false)
+* 835412d data: v2 - drop 35 duplicate rows (drop_duplicate_rows=true)
+* a45f506 feat(data): optional row filters (off by default) as extra data versions
+$ dvc status ; dvc status -c -r s3
+Data and pipelines are up to date.
+Cache and remote 's3' are in sync.
+$ python -m src.data.validation  (merged data)
+INFO Validation passed: 29620 rows, default rate 0.223
+merged data md5: f803528c24774440902c0ade7f999598, rows: 29620

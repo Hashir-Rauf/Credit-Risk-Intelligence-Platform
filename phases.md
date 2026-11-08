@@ -4,20 +4,25 @@ Step-level runbook for `plan.md`. For each phase: **goal, owner, prerequisites, 
 
 Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Reliability. Evidence goes to `docs/evidence/phase-N/`.
 
+**Owner flags (from `.github/CODEOWNERS`, updated 2026-11-08):**
+- **[H] = @Hashir-Rauf**: S2 + S3 (pipelines, CI, DVC pipeline/config, serving, docker, k8s, infra, monitoring, frontend), plus `src/data`, `params.yaml`, `scripts/`, data tests/fixtures. Hashir's work is done with AI assistance.
+- **[J] = @JA-Codex**: S1 modelling (`src/features`, `src/models`, `feature_repo`, `notebooks`, other `tests/`). The AI does **not** implement these; placeholders and a to-do list are in `docs/HANDOFF-JA-Codex.md`.
+- Status: ✅ done · 🟡 partly done · ⬜ not started · 🧩 placeholder only.
+
 ## Timeline overview
 
 | Phase | Name | Weeks | Lead | Depends on |
 |---|---|---|---|---|
 | 0 | Setup and governance | 1 | All | none |
-| 1 | Data, DVC, DagsHub | 1–2 | S1, S2 | 0 |
-| 2 | Modelling, MLflow, Feast | 2–3 | S1 | 1 |
-| 3 | Tests and CI | 3–4 | S2 | 1, 2 (parallel) |
-| 4 | Serving, containers, frontend | 4–5 | S3, S1 (UI) | 2, 3 |
-| 5 | Airflow + Kubeflow orchestration | 4–6 | S2 | 2, 4 |
-| 6 | AWS deployment and CD | 5–6 | S3, S2 | 3, 4 |
-| 7 | Kubernetes scaling | 6 | S3 | 4 |
-| 8 | Monitoring and retraining | 6–7 | S3, S1, S2 | 4, 5, 6 |
-| 9 | Security, ethics, docs | 7–8 | All | all |
+| 1 | Data, DVC, DagsHub | 1–2 | S1, S2 → **[H]** data/DVC, **[J]** EDA notebook | 0 |
+| 2 | Modelling, MLflow, Feast | 2–3 | S1 → **[J]** (all); `dvc.yaml` stages added by **[H]** | 1 |
+| 3 | Tests and CI | 3–4 | S2 → **[H]** (**[J]** writes model/feature tests) | 1, 2 (parallel) |
+| 4 | Serving, containers, frontend | 4–5 | S3 → **[H]** (API, Docker, BentoML, frontend) | 2, 3 |
+| 5 | Airflow + Kubeflow orchestration | 4–6 | S2 → **[H]** (**[J]** supplies component logic) | 2, 4 |
+| 6 | AWS deployment and CD | 5–6 | S3, S2 → **[H]** | 3, 4 |
+| 7 | Kubernetes scaling | 6 | S3 → **[H]** | 4 |
+| 8 | Monitoring and retraining | 6–7 | **[H]** metrics/alerts/DAG; **[J]** Evidently/evaluation logic | 4, 5, 6 |
+| 9 | Security, ethics, docs | 7–8 | All (**[J]** fairness/model-selection docs) | all |
 | 10 | Rehearsal and defense | 8 | All | all |
 
 **Milestone M1 (end of week 4): thin vertical slice.** Data → train → registered model → Flask API in Docker → CI green. Do not start deep work on Phases 7–8 before M1 is demonstrable.
@@ -57,30 +62,31 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 **Goal:** versioned, validated data, and a proven way to recover any past data/code pair. **Owners:** S1 (data), S2 (DVC/Git). **Prereq:** Phase 0.
 
 **Steps**
-1. S1: `src/data/ingestion.py` downloads UCI data into `data/raw/` (with checksum verification, idempotent). Document the licence in the README.
-2. S1: exploratory notebook in `notebooks/` (not used by the pipeline): class balance, value ranges, odd categories (`EDUCATION` 0/5/6, `MARRIAGE` 0), the `PAY_*` coding.
-3. S1: `src/data/validation.py` (Pandera or Great Expectations) with the checks: schema and dtypes, non-null, ranges (`AGE`, `LIMIT_BAL`), allowed categorical sets, duplicate IDs, target in {0,1}. Return a structured report and raise on failure.
-4. S2: `dvc init`; remotes: `s3` (default) and `dagshub`. Keep credentials in `.dvc/config.local` or env vars, never in the committed config.
-5. S2: `dvc.yaml` stages `ingest → validate → preprocess → train → evaluate` with `params.yaml` and metrics/plots outputs (stub downstream stages at first).
-6. S2: `dvc add data/raw` (or make it a stage output), commit `.dvc`/`dvc.lock`, `dvc push` to both remotes.
-7. S2 + S1: **Reproducibility demo script** `scripts/repro_demo.sh`:
-   `git checkout <old-sha> && dvc checkout` then verify the data hash matches the recorded one, then `git checkout main && dvc checkout`.
-8. S2: **Merge-conflict exercise:** two branches modify the data/`dvc.lock`; merge, resolve (take both, re-run `dvc repro`, commit), and write the procedure in `docs/dvc-merge-conflicts.md`.
-9. S1: add data tests (`tests/test_data.py`), including a deliberately corrupt fixture that must fail validation.
+1. **[H] ✅** `src/data/ingestion.py` downloads UCI data into `data/raw/` (checksum-verified, idempotent). README has the data section with the CC BY 4.0 licence and Yeh 2009 citation.
+2. **[J] ⬜** exploratory notebook in `notebooks/` (not used by the pipeline): class balance, value ranges, odd categories (`EDUCATION` 0/5/6, `MARRIAGE` 0), the `PAY_*` coding. Listed in `docs/HANDOFF-JA-Codex.md`.
+3. **[H] ✅** `src/data/validation.py` (Pandera) with schema/dtypes, non-null, ranges, allowed categories, duplicate IDs, target in {0,1}; structured report, raises on failure.
+4. **[H] ✅** `dvc init`; remotes `s3` (default) and `dagshub`; credentials only in `.dvc/config.local`.
+5. **[H] 🟡** `dvc.yaml` has `ingest → validate` with `params.yaml` and a metrics output. `preprocess → train → evaluate` stages are added after **[J]** writes the code (Hashir owns `dvc.yaml`).
+6. **[H] ✅** `data/raw` is the `ingest` output; `dvc.lock` written; `dvc push` done to both remotes (verified in sync).
+7. **[H] ✅** `scripts/repro_demo.sh` run against data v2 (`835412d`) and back; hashes match. Log: `docs/evidence/phase-1/repro_demo.log`.
+8. **[H] ✅** Merge-conflict exercise done (conflict in `dvc.lock`, `params.yaml`, report; resolved with `dvc repro`). Write-up: `docs/dvc-merge-conflicts.md`; transcript in evidence.
+9. **[H] ✅** `tests/test_data.py` (20 tests) with a corrupt fixture that must fail validation.
 
 **Deliverables:** ingestion + validation modules, DVC pipeline, two remotes, repro script, merge-conflict doc.
 **Exit criteria**
-- [ ] `dvc repro` runs from a fresh clone after `dvc pull`.
-- [ ] Repro demo restores the earlier data byte-for-byte (hashes match).
-- [ ] Corrupt data fails validation with a clear message.
-- [ ] No data file is tracked by git.
+- [x] `dvc repro` runs from a fresh clone after `dvc pull` (checked in a clean copy; identical MD5). **[H]**
+- [x] Repro demo restores the earlier data byte-for-byte (hashes match). **[H]**
+- [x] Corrupt data fails validation with a clear message. **[H]**
+- [x] No data file is tracked by git (only small test fixtures). **[H]**
 
-**Evidence:** terminal log of the repro demo, `dvc dag` output, DagsHub data view, conflict-resolution write-up.
+**Evidence (all [H], in `docs/evidence/phase-1/`, index in its README.md):** ✅ repro demo log, ✅ `dvc dag` output, ✅ conflict-resolution write-up and transcript, ✅ validation fail/pass log, ✅ tests/lint log, ✅ remote status; ✅ DagsHub data view screenshot.
+
+**Phase 1 status:** all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: open the PR (JA-Codex reviews), and [J]'s EDA notebook (item 2).
 
 ---
 
 ## Phase 2 — Modelling, MLflow, Feast
-**Goal:** a justified model, tracked experiments, and a feature store. **Owner:** S1. **Prereq:** Phase 1.
+**Goal:** a justified model, tracked experiments, and a feature store. **Owner:** S1 → **[J] @JA-Codex** (🧩 placeholders in `src/features/preprocessing.py`, `src/models/{train,tune,evaluate}.py`; everything else ⬜; see `docs/HANDOFF-JA-Codex.md`). **[H]** only adds the `dvc.yaml` stages and gives MLflow/DagsHub access. **Prereq:** Phase 1.
 
 **Steps**
 1. `src/features/preprocessing.py`: sklearn `ColumnTransformer` (scale numeric, encode categoricals), fit on train only; save the fitted transformer with the model as one `Pipeline`.

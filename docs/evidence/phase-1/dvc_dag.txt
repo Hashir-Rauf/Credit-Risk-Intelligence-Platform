@@ -1,0 +1,18 @@
+$ dvc dag
+ +--------+  
+ | ingest |  
+ +--------+  
+      *      
+      *      
+      *      
++----------+ 
+| validate | 
++----------+ 
+
+$ dvc dag --md
+```mermaid
+flowchart TD
+	node1["ingest"]
+	node2["validate"]
+	node1-->node2
+```

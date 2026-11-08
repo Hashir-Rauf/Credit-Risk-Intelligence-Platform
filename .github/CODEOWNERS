@@ -1,16 +1,26 @@
-# S1 - Data & ML
-/src/data/            @JA-Codex
+# Last matching pattern wins. Keep specific entries below general ones.
+# Owner rule of thumb: whoever wrote/maintains it. Paths still owned by @JA-Codex are
+# placeholders or not started yet - see docs/HANDOFF-JA-Codex.md.
+
+# S1 - Data & ML  (@JA-Codex: modelling work, not started)
+/src/data/            @Hashir-Rauf
 /src/features/        @JA-Codex
 /src/models/          @JA-Codex
 /feature_repo/        @JA-Codex
+/notebooks/           @JA-Codex
 /frontend/            @Hashir-Rauf
 
 # S2 - MLOps & Automation
 /pipelines/           @Hashir-Rauf
 /.github/             @Hashir-Rauf
 /tests/               @JA-Codex
-/dvc.yaml             @JA-Codex
-/.dvc/config          @JA-Codex
+/tests/test_data.py   @Hashir-Rauf
+/tests/fixtures/      @Hashir-Rauf
+/dvc.yaml             @Hashir-Rauf
+/dvc.lock             @Hashir-Rauf
+/.dvc/config          @Hashir-Rauf
+/params.yaml          @Hashir-Rauf
+/scripts/             @Hashir-Rauf
 
 # S3 - Deployment & Reliability
 /src/serving/         @Hashir-Rauf

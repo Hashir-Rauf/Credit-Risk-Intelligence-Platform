@@ -1,0 +1,13 @@
+# Pipeline parameters (read by DVC stages and src/). Keep seeds and thresholds here.
+data:
+  source_url: https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+  # SHA-256 of the downloaded zip; ingestion fails if the download does not match.
+  source_sha256: 56c885f84457f6680f8438f02bfcdac9579323d8a94465ee5f26e32baa727602
+  excel_name: default of credit card clients.xls
+  raw_path: data/raw/credit_default.csv
+  validation_report: reports/data_validation.json
+  # Optional row filters (off by default; see src/data/ingestion.py)
+  drop_duplicate_rows: false
+  drop_unknown_education: false
+
+seed: 42
