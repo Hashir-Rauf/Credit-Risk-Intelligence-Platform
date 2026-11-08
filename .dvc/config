@@ -5,5 +5,5 @@
     url = s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc
     region = ap-southeast-2
 ['remote "dagshub"']
-    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.dvc
+    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
     auth = basic
