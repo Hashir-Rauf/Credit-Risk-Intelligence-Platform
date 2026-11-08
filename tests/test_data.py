@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from src.data.ingestion import ChecksumError, sha256_bytes, zip_to_frame
+from src.data.ingestion import ChecksumError, apply_row_filters, sha256_bytes, zip_to_frame
 from src.data.validation import DataValidationError, validate
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -110,3 +110,22 @@ def test_zip_to_frame_renames_columns(tmp_path):
         zf.write(buf_xls, "data.xlsx")
     df = zip_to_frame(zbuf.getvalue(), "data.xlsx")
     assert list(df.columns) == ["customer_id", "PAY_1", "default"]
+
+
+def test_row_filters_off_by_default(good):
+    assert len(apply_row_filters(good, {})) == len(good)
+
+
+def test_drop_duplicate_rows_ignores_customer_id(good):
+    dup = good.iloc[[0]].copy()
+    dup["customer_id"] = 999_999
+    df = pd.concat([good, dup], ignore_index=True)
+    out = apply_row_filters(df, {"drop_duplicate_rows": True})
+    assert len(out) == len(good)
+
+
+def test_drop_unknown_education_keeps_only_documented_codes(good):
+    good.loc[0, "EDUCATION"] = 5
+    out = apply_row_filters(good, {"drop_unknown_education": True})
+    assert out["EDUCATION"].isin([1, 2, 3, 4]).all()
+    assert len(out) < len(good)

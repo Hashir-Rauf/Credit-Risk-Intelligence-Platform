@@ -9,6 +9,8 @@ stages:
       - data.source_sha256
       - data.excel_name
       - data.raw_path
+      - data.drop_duplicate_rows
+      - data.drop_unknown_education
     outs:
       - data/raw/credit_default.csv
 

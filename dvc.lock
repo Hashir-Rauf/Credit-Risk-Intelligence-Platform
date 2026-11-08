@@ -5,10 +5,12 @@ stages:
     deps:
     - path: src/data/ingestion.py
       hash: md5
-      md5: 29b5d0a162a6d2181e96494aa51e061a
-      size: 3028
+      md5: 7ce65196c5585c19ded1e817dea343ca
+      size: 3575
     params:
       params.yaml:
+        data.drop_duplicate_rows: false
+        data.drop_unknown_education: false
         data.excel_name: default of credit card clients.xls
         data.raw_path: data/raw/credit_default.csv
         data.source_sha256: 

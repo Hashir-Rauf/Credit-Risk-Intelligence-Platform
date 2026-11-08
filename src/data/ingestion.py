@@ -63,6 +63,16 @@ def zip_to_frame(content: bytes, excel_name: str) -> pd.DataFrame:
     return df.rename(columns=COLUMN_RENAMES)
 
 
+def apply_row_filters(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """Optional, off by default. They create alternative data versions (used by the DVC
+    reproducibility and merge-conflict exercises); any modelling use is decided in Phase 2."""
+    if cfg.get("drop_duplicate_rows", False):
+        df = df.drop_duplicates(subset=[c for c in df.columns if c != "customer_id"])
+    if cfg.get("drop_unknown_education", False):
+        df = df[df["EDUCATION"].isin([1, 2, 3, 4])]
+    return df.reset_index(drop=True)
+
+
 def ingest(params: dict, force: bool = False) -> Path:
     cfg = params["data"]
     out = Path(cfg["raw_path"])
@@ -70,7 +80,7 @@ def ingest(params: dict, force: bool = False) -> Path:
         log.info("%s already exists (sha256 %s); use --force to rebuild", out, sha256_file(out))
         return out
     content = download_zip(cfg["source_url"], cfg["source_sha256"])
-    df = zip_to_frame(content, cfg["excel_name"])
+    df = apply_row_filters(zip_to_frame(content, cfg["excel_name"]), cfg)
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out, index=False, lineterminator="\n")
     log.info("Wrote %s rows x %s cols to %s (sha256 %s)", *df.shape, out, sha256_file(out))

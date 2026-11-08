@@ -6,5 +6,8 @@ data:
   excel_name: default of credit card clients.xls
   raw_path: data/raw/credit_default.csv
   validation_report: reports/data_validation.json
+  # Optional row filters (off by default; see src/data/ingestion.py)
+  drop_duplicate_rows: false
+  drop_unknown_education: false
 
 seed: 42
