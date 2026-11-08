@@ -1,6 +1,6 @@
 $ dvc remote list
 s3      s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc (default)
-dagshub https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.dvc
+dagshub https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
 
 $ dvc status -c -r s3
 Cache and remote 's3' are in sync.
@@ -25,5 +25,5 @@ $ cat .dvc/config  (committed; no credentials)
     url = s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc
     region = ap-southeast-2
 ['remote "dagshub"']
-    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.dvc
+    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
     auth = basic

@@ -22,7 +22,7 @@ _Last updated: 2026-11-08_
 
 ## Update 2026-11-08 (later)
 - `.pre-commit-config.yaml` and skeleton folders (with `.gitkeep`) are written, not committed.
-- User confirmed: AWS budget created; branch protection enabled on `main`; third teammate will not touch code (no CODEOWNERS entry needed); DagsHub project exists at https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System (AI to init/manage the MLflow/DVC wiring; needs a DagsHub token in local `.env`).
+- User confirmed: AWS budget created; branch protection enabled on `main`; third teammate will not touch code (no CODEOWNERS entry needed); DagsHub project exists at https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform (AI to init/manage the MLflow/DVC wiring; needs a DagsHub token in local `.env`).
 - Professor approved: Hugging Face, BentoML, Feast, Flask API, Kubeflow.
 - Still unconfirmed: AWS spend limit itself (budget alerts exist).
 
@@ -92,7 +92,7 @@ Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS acco
 
 ## Open questions / blockers
 - AWS budget is created; whether a hard spend limit is set is still unconfirmed.
-- ~~DagsHub token~~ In local `.env` (gitignored) and verified: MLflow endpoint `https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.mlflow` returns 200. `.env` also has MLFLOW_TRACKING_*, AWS_REGION, AWS_PROFILE.
+- ~~DagsHub token~~ In local `.env` (gitignored) and verified: MLflow endpoint `https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.mlflow` returns 200. `.env` also has MLFLOW_TRACKING_*, AWS_REGION, AWS_PROFILE.
 
 ## Preferences
 - No AI attribution in commits/PRs (also saved in the user's Claude memory).
@@ -104,9 +104,9 @@ Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS acco
 |---|---|
 | GitHub repo | https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform |
 | CODEOWNERS handles | `@Hashir-Rauf`, `@JA-Codex` (third member _TBD_) |
-| DagsHub repo | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System |
+| DagsHub repo | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform |
 | DVC remote (S3 bucket) | `s3://credit-risk-dvc-<account-id>-ap-southeast-2-an/dvc` (created 2026-11-08: private, versioned, SSE-S3 + Bucket Keys, SSE-C blocked, HTTPS-only policy, ABAC on, tag project=credit-risk, no access logging) |
-| MLflow tracking URI | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.mlflow (auth via `.env`) |
+| MLflow tracking URI | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.mlflow (auth via `.env`) |
 | AWS region / CLI profile | ap-southeast-2 / `credit-risk` |
 | GitHub OIDC provider / deploy role | _TBD_ |
 | ECR repo / ECS cluster | _TBD_ |
