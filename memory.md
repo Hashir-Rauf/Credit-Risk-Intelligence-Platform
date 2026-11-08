@@ -26,6 +26,17 @@ _Last updated: 2026-11-08_
 - Professor approved: Hugging Face, BentoML, Feast, Flask API, Kubeflow.
 - Still unconfirmed: AWS spend limit itself (budget alerts exist).
 
+## Phase 1 progress (2026-11-08, branch `feat/phase-1-data-dvc`, NOT committed yet)
+Done: `params.yaml`, `src/data/ingestion.py` (pinned zip SHA-256, deterministic CSV, columns renamed `customer_id`, `PAY_1`, `default`), `src/data/validation.py` (pandera, structured report, raises), `tests/test_data.py` (20 pass) + fixtures (`credit_sample.csv`, `credit_corrupt.csv`), `dvc init`, remotes `s3` (default) and `dagshub` (creds in gitignored `.dvc/config.local`), `dvc.yaml` (ingest -> validate), `dvc push` to both remotes, `scripts/repro_demo.sh`, README data section. Fresh-copy `dvc pull` verified (same MD5). `.venv` created locally (not committed).
+Data facts: 30,000 rows, default rate 22.12%, no nulls/dupe IDs; `EDUCATION` has 0/5/6 and `MARRIAGE` 0 (allowed, handle in preprocessing); 35 duplicate rows excluding ID (kept).
+Remaining Phase 1: EDA notebook (`notebooks/`), run `scripts/repro_demo.sh` once there are 2 data commits, merge-conflict exercise + `docs/dvc-merge-conflicts.md`, evidence in `docs/evidence/phase-1/`, commit + PR. DVC needs `botocore[crt]` for `aws login` creds (added to requirements).
+Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS account ID, which AWS does not treat as secret). User decides whether that is OK for a public repo.
+
+## Ownership rule (user, 2026-11-08)
+- Everything the AI does is attributed to **Hashir-Rauf** (CODEOWNERS and commits). Repo-local git identity set to `Hashir Rauf <hashirpriv04@gmail.com>`; the global git email is `jahangir.saleem.mughal@gmail.com` (looks like JA-Codex's), so earlier commits `7dcdc7a..f7b21fb` carry that email. User should confirm `hashirpriv04@gmail.com` is verified on their GitHub account.
+- JA-Codex's work (Phase 2 modelling, features, Feast, notebooks, model/fairness docs) is NOT implemented by the AI. Placeholders live in `src/features/preprocessing.py`, `src/models/{train,tune,evaluate}.py`; the flag/to-do list is `docs/HANDOFF-JA-Codex.md`. CODEOWNERS updated: `src/data`, `dvc.yaml`, `.dvc/config`, `params.yaml`, `scripts/`, `tests/test_data.py`, `tests/fixtures/` -> Hashir-Rauf; `src/features`, `src/models`, `feature_repo`, `notebooks`, other `tests/` -> JA-Codex.
+- Still the AI's (S2/S3 = Hashir): pipelines, CI, serving, docker, k8s, infra, monitoring, frontend.
+
 ## Next up
 **Mine (AI):**
 1. ~~Write `.pre-commit-config.yaml` and the skeleton folders.~~ Done.
@@ -72,13 +83,19 @@ _Last updated: 2026-11-08_
 - [x] Kubeflow approved (confirmed 2026-11-08); local kind setup still assumed.
 - [ ] Initial quality gate ROC-AUC ≥ 0.75 is reasonable; revisit after the baseline.
 
+## AWS findings (2026-11-08)
+- Account ID <account-id> (role `AccountFullAccessRole`), no S3 buckets yet.
+- **SCP explicitly denies `iam:ListOpenIDConnectProviders`** (policy p-tjsq4aou). Creating the GitHub OIDC provider is probably blocked too; verify with a real create attempt only after the user agrees. Fallback ideas: skip AWS deploy from CI until Phase 6, or use a scoped IAM user key stored in GitHub Secrets (if IAM user creation is allowed).
+- S3 skill requires bucket name `<prefix>-<account-id>-<region>-an` with `--bucket-namespace account-regional`.
+
 ## Open questions / blockers
 - AWS budget is created; whether a hard spend limit is set is still unconfirmed.
 - ~~DagsHub token~~ In local `.env` (gitignored) and verified: MLflow endpoint `https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.mlflow` returns 200. `.env` also has MLFLOW_TRACKING_*, AWS_REGION, AWS_PROFILE.
 
 ## Preferences
 - No AI attribution in commits/PRs (also saved in the user's Claude memory).
-- AWS help level: _not asked yet_ (ask once; record low / medium / high).
+- AWS help level: **HIGH** (set 2026-11-08). User wants the AI to do almost all AWS work; explain each step, suggest alternatives, flag best practices, still follow the user's choice.
+- DVC remote: **S3** (decided 2026-11-08). AWS spend limit/budget alerts: user says set.
 
 ## Resources (fill in as created; no credentials here)
 | Item | Value |
@@ -86,7 +103,7 @@ _Last updated: 2026-11-08_
 | GitHub repo | https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform |
 | CODEOWNERS handles | `@Hashir-Rauf`, `@JA-Codex` (third member _TBD_) |
 | DagsHub repo | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System |
-| DVC remote (S3 bucket) | _TBD_ |
+| DVC remote (S3 bucket) | `s3://credit-risk-dvc-<account-id>-ap-southeast-2-an/dvc` (created 2026-11-08: private, versioned, SSE-S3 + Bucket Keys, SSE-C blocked, HTTPS-only policy, ABAC on, tag project=credit-risk, no access logging) |
 | MLflow tracking URI | https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-System.mlflow (auth via `.env`) |
 | AWS region / CLI profile | ap-southeast-2 / `credit-risk` |
 | GitHub OIDC provider / deploy role | _TBD_ |

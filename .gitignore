@@ -55,7 +55,7 @@ data/external/*
 dvc_plots/
 
 # ---- Models & ML artifacts (registered via MLflow / DVC) --------------------
-models/
+/models/
 artifacts/
 *.pkl
 *.pickle
