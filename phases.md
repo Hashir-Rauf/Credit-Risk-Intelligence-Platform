@@ -79,9 +79,9 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 - [x] Corrupt data fails validation with a clear message. **[H]**
 - [x] No data file is tracked by git (only small test fixtures). **[H]**
 
-**Evidence (all [H], in `docs/evidence/phase-1/`, index in its README.md):** ✅ repro demo log, ✅ `dvc dag` output, ✅ conflict-resolution write-up and transcript, ✅ validation fail/pass log, ✅ tests/lint log, ✅ remote status; ⬜ DagsHub data view screenshot (needs a logged-in browser; steps in the evidence README).
+**Evidence (all [H], in `docs/evidence/phase-1/`, index in its README.md):** ✅ repro demo log, ✅ `dvc dag` output, ✅ conflict-resolution write-up and transcript, ✅ validation fail/pass log, ✅ tests/lint log, ✅ remote status; ✅ DagsHub data view screenshot.
 
-**Phase 1 status:** all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: the DagsHub screenshot, and [J]'s EDA notebook (item 2).
+**Phase 1 status:** all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: open the PR (JA-Codex reviews), and [J]'s EDA notebook (item 2).
 
 ---
 

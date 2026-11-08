@@ -11,15 +11,15 @@ Captured 2026-11-08 on branch `feat/phase-1-data-dvc`. Commits are authored by H
 | Tests and lint | [tests_and_lint.log](tests_and_lint.log) | 23 passed; ruff and black clean |
 | Merge-conflict exercise | [merge_conflict.log](merge_conflict.log), [../../dvc-merge-conflicts.md](../../dvc-merge-conflicts.md) | conflict in `dvc.lock`, `params.yaml`, report; resolved with `dvc repro` |
 | Git history of the work | [git_history.txt](git_history.txt) | |
-| DagsHub status | [dagshub_check.txt](dagshub_check.txt) | mirror repo, DVC remote, MLflow endpoint and data file verified |
+| DagsHub data view | [dagshub_data_view.png](dagshub_data_view.png), [dagshub_check.txt](dagshub_check.txt) | mirror repo, DVC remote, MLflow endpoint and data file verified |
 | `dvc repro` from a fresh clone after `dvc pull` | checked in a clean copy (outside git, 2026-11-08); same md5 `a7e80c90...`, `dvc status` clean | see summary in `memory.md` |
 
-## Not captured automatically
-- **DagsHub data view screenshot** (needs a logged-in browser). The DagsHub repo
-  `Hashir-Rauf/Credit-Risk-Intelligence-Platform` mirrors the GitHub repo. Open it, switch the branch
-  to `feat/phase-1-data-dvc` (or `main` after the PR merges), open `data/raw`, and save the screenshot
-  here as `dagshub_data_view.png`. `credit_default.csv` should show as a DVC file with hash `a7e80c90...`
-  (confirmed through the API in `dagshub_check.txt`).
+## Screenshots
+- [dagshub_data_view.png](dagshub_data_view.png): DagsHub repo (mirror of the GitHub repo), branch
+  `feat/phase-1-data-dvc`, folder `data/raw`: `credit_default.csv` is listed as a DVC-tracked file
+  (hash `a7e80c90...`, confirmed through the API in `dagshub_check.txt`).
+
+## Not captured here
 - Branch-protection and budget screenshots (Phase 0 evidence) are taken in the GitHub and AWS consoles.
 
 ## Notes
