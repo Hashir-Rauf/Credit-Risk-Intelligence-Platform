@@ -1,0 +1,25 @@
+# Data pipeline. Downstream stages (preprocess, train, evaluate) are added in Phase 2.
+stages:
+  ingest:
+    cmd: python -m src.data.ingestion
+    deps:
+      - src/data/ingestion.py
+    params:
+      - data.source_url
+      - data.source_sha256
+      - data.excel_name
+      - data.raw_path
+    outs:
+      - data/raw/credit_default.csv
+
+  validate:
+    cmd: python -m src.data.validation
+    deps:
+      - src/data/validation.py
+      - data/raw/credit_default.csv
+    params:
+      - data.raw_path
+      - data.validation_report
+    metrics:
+      - reports/data_validation.json:
+          cache: false

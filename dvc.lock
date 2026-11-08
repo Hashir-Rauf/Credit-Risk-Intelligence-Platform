@@ -1,0 +1,42 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.data.ingestion
+    deps:
+    - path: src/data/ingestion.py
+      hash: md5
+      md5: 29b5d0a162a6d2181e96494aa51e061a
+      size: 3028
+    params:
+      params.yaml:
+        data.excel_name: default of credit card clients.xls
+        data.raw_path: data/raw/credit_default.csv
+        data.source_sha256: 
+          56c885f84457f6680f8438f02bfcdac9579323d8a94465ee5f26e32baa727602
+        data.source_url: 
+          https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+    outs:
+    - path: data/raw/credit_default.csv
+      hash: md5
+      md5: a7e80c905840715d8456fe06d935f981
+      size: 2867198
+  validate:
+    cmd: python -m src.data.validation
+    deps:
+    - path: data/raw/credit_default.csv
+      hash: md5
+      md5: a7e80c905840715d8456fe06d935f981
+      size: 2867198
+    - path: src/data/validation.py
+      hash: md5
+      md5: cfc580b7d202f739215450bdf899cd2d
+      size: 4637
+    params:
+      params.yaml:
+        data.raw_path: data/raw/credit_default.csv
+        data.validation_report: reports/data_validation.json
+    outs:
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 3b50c4ea7c115784c6fbd7177c3d3669
+      size: 110
