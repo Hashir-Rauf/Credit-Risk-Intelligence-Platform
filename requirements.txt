@@ -1,5 +1,6 @@
-# Core runtime dependencies (Phases 1-4). Ranges for now; after the first clean
-# install run `pip freeze > requirements.lock.txt` and use that for CI/Docker.
+# Core runtime dependencies (Phases 1-4). Ranges express intent; the exact, tested versions are in
+# requirements.lock.txt (rules.md: pin dependencies). Use the lock file for CI/Docker and when
+# reproducing results: `pip install -r requirements.lock.txt`.
 # Airflow and Kubeflow have conflicting dependency trees, so they live in their
 # own files (pipelines/airflow/requirements.txt, pipelines/kubeflow/requirements.txt)
 # and are added in Phase 5.
