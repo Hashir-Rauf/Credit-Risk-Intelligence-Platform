@@ -2,7 +2,7 @@
 
 End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project (3 students).
 
-> Status: Phase 1 (data + DVC) in progress. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
+> Status: Phase 1 done; Phase 2 baseline (features, train, evaluate, MLflow, gate) merged; tuning, registry, Feast, fairness pending. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
 
 ## Dataset
 UCI *Default of Credit Card Clients* (30,000 rows, 23 features). Source: https://archive.ics.uci.edu/dataset/350. Used for coursework only; not a real lending decision tool.
@@ -25,7 +25,7 @@ cp .env.example .env  # then fill in values (never commit .env)
 Data is versioned with DVC (not stored in git). Remotes: `s3` (default) and `dagshub`.
 ```bash
 dvc pull -r dagshub   # or: dvc pull   (S3; needs AWS profile `credit-risk`, see .env.example)
-dvc repro             # ingest -> validate
+dvc repro             # ingest -> validate -> preprocess -> train -> evaluate (exit 3 = gate failed)
 dvc dag
 ```
 Remote credentials live in the gitignored `.dvc/config.local`:
@@ -33,6 +33,11 @@ Remote credentials live in the gitignored `.dvc/config.local`:
 dvc remote modify --local s3 profile <your-aws-profile>
 dvc remote modify --local dagshub user <dagshub-user>
 dvc remote modify --local dagshub password <dagshub-token>
+```
+CI-style smoke run (no data or credentials needed):
+```bash
+for m in src.data.synthetic src.features.preprocessing src.models.train src.models.evaluate; do python -m $m --smoke; done
+mlflow ui --backend-store-uri sqlite:///mlflow.db   # browse runs
 ```
 Later phases add: `make up`, deployment and teardown instructions.
 

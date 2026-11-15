@@ -4,7 +4,12 @@
 
 # S1 - Data & ML  (@JA-Codex: modelling work, not started)
 /src/data/            @Hashir-Rauf
+/src/common/          @JA-Codex
+/src/data/synthetic.py @JA-Codex
+/src/data/paths.py    @JA-Codex
+/src/data/schema.py   @JA-Codex
 /src/features/        @JA-Codex
+/configs/             @JA-Codex
 /src/models/          @JA-Codex
 /feature_repo/        @JA-Codex
 /notebooks/           @JA-Codex

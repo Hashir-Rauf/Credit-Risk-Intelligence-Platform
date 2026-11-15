@@ -32,6 +32,8 @@ data/raw/*
 data/processed/*
 data/interim/*
 data/external/*
+data/smoke/
+reports/last_run.json
 !data/**/.gitkeep
 *.csv
 *.parquet
