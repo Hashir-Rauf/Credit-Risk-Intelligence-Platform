@@ -6,7 +6,7 @@ $ dvc status -c -r dagshub
 Cache and remote 'dagshub' are in sync.
 
 $ dvc status -c -r s3
-(NOT re-run: AWS login session expired on 2026-11-15; see README note. Data was pushed to S3 before the merge for the earlier data versions.)
+Cache and remote 's3' are in sync.  (pushed 2026-11-15 after AWS re-login)
 
 $ dvc status
 ingest:

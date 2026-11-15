@@ -81,7 +81,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 
 **Evidence (all [H], in `docs/evidence/phase-1/`, index in its README.md):** ✅ repro demo log, ✅ `dvc dag` output, ✅ conflict-resolution write-up and transcript, ✅ validation fail/pass log, ✅ tests/lint log, ✅ remote status; ✅ DagsHub data view screenshot.
 
-**Phase 1 status (2026-11-15):** JA-Codex's PR #3 (data layer, config, 159 tests) merged and is now canonical; evidence refreshed in `docs/evidence/phase-1/`. Pending: `dvc push -r s3` for the new data (AWS login expired), retake DagsHub screenshot, EDA notebook ([J]). Earlier status: all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: open the PR (JA-Codex reviews), and [J]'s EDA notebook (item 2).
+**Phase 1 status (2026-11-15):** JA-Codex's PR #3 (data layer, config, 159 tests) merged and is now canonical; evidence refreshed in `docs/evidence/phase-1/`. Both remotes in sync; DagsHub pipeline screenshot captured. Pending: merge PR #3, EDA notebook ([J]). Earlier status: all [H] items done on branch `feat/phase-1-data-dvc` (pushed, PR pending review by JA-Codex). Remaining: open the PR (JA-Codex reviews), and [J]'s EDA notebook (item 2).
 
 ---
 
