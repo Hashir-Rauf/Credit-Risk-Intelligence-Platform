@@ -1,4 +1,6 @@
-# Data pipeline. Downstream stages (preprocess, train, evaluate) are added in Phase 2.
+# ingest -> validate (Phase 1) -> preprocess -> train -> evaluate (Phase 2).
+# `evaluate` exits 3 when the quality gate fails, which stops `dvc repro`.
+# Every stage is `python -m <module> [--params FILE] [--smoke]`; see docs/contracts-s1.md.
 stages:
   ingest:
     cmd: python -m src.data.ingestion
@@ -24,4 +26,81 @@ stages:
       - data.validation_report
     metrics:
       - reports/data_validation.json:
+          cache: false
+
+  preprocess:
+    cmd: python -m src.features.preprocessing
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/data/schema.py
+      - src/features/preprocessing.py
+      - data/raw/credit_default.csv
+      - reports/data_validation.json
+    params:
+      - seed
+      - data.raw_path
+      - data.validation_report
+      - data.processed_dir
+      - data.id_column
+      - data.target_column
+      - split
+      - features
+      - validation.domains
+      - validation.ranges
+      - evaluate.decision_threshold
+    outs:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+      - reports/feature_schema.json:
+          cache: false
+
+  train:
+    cmd: python -m src.models.train
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/data/schema.py
+      - src/features/preprocessing.py
+      - src/models/evaluate.py
+      - src/models/tracking.py
+      - src/models/train.py
+      - configs/model_params.yaml
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+      - reports/feature_schema.json
+    params:
+      - seed
+      - data.target_column
+      - features
+      - train.algorithm
+      - evaluate.decision_threshold
+      - mlflow.experiment_name
+    outs:
+      - models/model.joblib
+      - reports/plots
+    metrics:
+      - reports/metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python -m src.models.evaluate
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/features/preprocessing.py
+      - src/models/evaluate.py
+      - src/models/tracking.py
+      - models/model.joblib
+      - data/processed/test.parquet
+      - reports/metrics.json
+    params:
+      - data.target_column
+      - features.exclude_sensitive_from_model
+      - evaluate
+      - gate
+    outs:
+      - reports/evaluation.json:
           cache: false

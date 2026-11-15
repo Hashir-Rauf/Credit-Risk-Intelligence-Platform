@@ -1,0 +1,11 @@
+# Normalise line endings so Windows (CRLF) and Linux/Docker (LF) checkouts do not
+# produce whole-file diffs. After adding this file run once:
+#   git add --renormalize .
+* text=auto eol=lf
+
+# Binary files
+*.pdf binary
+*.png binary
+*.jpg binary
+*.parquet binary
+*.pkl binary
