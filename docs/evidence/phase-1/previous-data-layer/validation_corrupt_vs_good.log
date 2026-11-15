@@ -1,0 +1,14 @@
+# Corrupt fixture must FAIL validation (exit code != 0)
+$ python -m src.data.validation --input tests/fixtures/credit_corrupt.csv --report docs/evidence/phase-1/corrupt_report.json
+ERROR Data validation failed with 6 issue(s):
+  - AGE: in_range(18, 100) (1 rows, e.g. ['-5'])
+  - LIMIT_BAL: in_range(1, 5000000) (1 rows, e.g. ['-100'])
+  - PAY_AMT1: greater_than_or_equal_to(0) (1 rows, e.g. ['-1'])
+  - SEX: isin([1, 2]) (1 rows, e.g. ['3'])
+  - customer_id: field_uniqueness (2 rows, e.g. ['5', '5'])
+  - default: isin([0, 1]) (1 rows, e.g. ['7'])
+exit code: 1
+
+# Good sample must PASS
+INFO Validation passed: 300 rows, default rate 0.23
+exit code: 0

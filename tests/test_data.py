@@ -730,6 +730,13 @@ def dvc_repo(root: Path, tmp_path: Path) -> Path:
 DVC = [sys.executable, "-m", "dvc"]
 
 
+def _lock_stage(lock: Path, stage: str):
+    """The recorded entry for `stage` in dvc.lock, or None if there is no lock/entry."""
+    if not lock.exists():
+        return None
+    return (yaml.safe_load(lock.read_text(encoding="utf-8")) or {}).get("stages", {}).get(stage)
+
+
 @pytest.mark.integration
 class TestDvcReproducibility:
     """Real `dvc repro` in a throwaway git repo: the spec's 'retrieve an earlier code version
@@ -766,10 +773,11 @@ class TestDvcReproducibility:
         assert sha256_file(raw) == v1_hash
 
     def test_validation_failure_stops_dvc_repro(self, dvc_repo):
+        lock = dvc_repo / "dvc.lock"
+        # A committed dvc.lock may already exist; a failed validate must leave it untouched.
+        validate_before = _lock_stage(lock, "validate")
         edit_params(dvc_repo, lambda p: p["validation"].update(min_rows=10**6))
         result = sh([*DVC, "repro"], dvc_repo, tool_env())
         assert result.returncode != 0
         assert "exited with 2" in result.stdout + result.stderr
-        assert not (dvc_repo / "dvc.lock").exists() or "validate" not in (
-            (dvc_repo / "dvc.lock").read_text()
-        )
+        assert _lock_stage(lock, "validate") == validate_before

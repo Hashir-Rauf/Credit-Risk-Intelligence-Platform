@@ -1,28 +1,25 @@
 # Phase 1 evidence (data, DVC, DagsHub)
 
-Captured 2026-11-08 on branch `feat/phase-1-data-dvc`. Commits are authored by Hashir-Rauf.
+Refreshed 2026-11-15 after PR #3 (JA-Codex's S1 data layer) was merged with the earlier Phase 1 work.
+Current pipeline: `ingest -> validate` on `data/raw/default_credit_card.csv` (30,000 rows, sha256
+`0bfd903f...`). Evidence from the earlier data layer is kept in [previous-data-layer/](previous-data-layer/).
 
-| Exit criterion / deliverable | Evidence file | Result |
+| Exit criterion / deliverable | Evidence | Result |
 |---|---|---|
-| Repro demo restores earlier data byte-for-byte | [repro_demo.log](repro_demo.log) | data v2 (`835412d`, 29,965 rows) restored with matching md5 `22e7b58a...`; back on v1 (30,000 rows, md5 `a7e80c90...`) |
+| Repro demo restores earlier data byte-for-byte | [repro_demo.log](repro_demo.log) | commit `835412d` (older layer, md5 `22e7b58a...`) restored exactly; back on current (md5 `6a4f15ee...`) |
 | `dvc dag` | [dvc_dag.txt](dvc_dag.txt) | `ingest -> validate` |
-| Both remotes in sync; committed config has no credentials | [dvc_remotes_status.txt](dvc_remotes_status.txt) | `s3` and `dagshub` in sync, pipeline up to date |
-| Corrupt data fails with a clear message | [validation_corrupt_vs_good.log](validation_corrupt_vs_good.log), [corrupt_report.json](corrupt_report.json) | corrupt fixture exits 1 with 6 issues; good sample exits 0 |
-| Tests and lint | [tests_and_lint.log](tests_and_lint.log) | 23 passed; ruff and black clean |
-| Merge-conflict exercise | [merge_conflict.log](merge_conflict.log), [../../dvc-merge-conflicts.md](../../dvc-merge-conflicts.md) | conflict in `dvc.lock`, `params.yaml`, report; resolved with `dvc repro` |
-| Git history of the work | [git_history.txt](git_history.txt) | |
-| DagsHub data view | [dagshub_data_view.png](dagshub_data_view.png), [dagshub_check.txt](dagshub_check.txt) | mirror repo, DVC remote, MLflow endpoint and data file verified |
-| `dvc repro` from a fresh clone after `dvc pull` | checked in a clean copy (outside git, 2026-11-08); same md5 `a7e80c90...`, `dvc status` clean | see summary in `memory.md` |
-
-## Screenshots
-- [dagshub_data_view.png](dagshub_data_view.png): DagsHub repo (mirror of the GitHub repo), branch
-  `feat/phase-1-data-dvc`, folder `data/raw`: `credit_default.csv` is listed as a DVC-tracked file
-  (hash `a7e80c90...`, confirmed through the API in `dagshub_check.txt`).
-
-## Not captured here
-- Branch-protection and budget screenshots (Phase 0 evidence) are taken in the GitHub and AWS consoles.
+| Remotes configured; committed config has no credentials | [dvc_remotes_status.txt](dvc_remotes_status.txt) | `dagshub` in sync. `s3`: current data not pushed yet (AWS login expired, see below) |
+| Corrupt data fails with a clear message | [validation_corrupt_vs_good.log](validation_corrupt_vs_good.log) | 6 injected errors reported, exit code 2; real data passes |
+| Tests and lint | [tests_and_lint.log](tests_and_lint.log) | 159 passed, 95% coverage; ruff, black, `pip check` clean |
+| DagsHub data view | [dagshub_data_view.png](dagshub_data_view.png), [dagshub_check.txt](dagshub_check.txt) | captured on the earlier data version; see note |
+| Merge-conflict exercise | [previous-data-layer/merge_conflict.log](previous-data-layer/merge_conflict.log), [../../dvc-merge-conflicts.md](../../dvc-merge-conflicts.md) | procedure is layer-independent |
+| Git history | [git_history.txt](git_history.txt) | |
 
 ## Notes
-- The merge-conflict branches (`exp/dedupe`, `exp/clean-education`) were local and were deleted
-  after the exercise; the transcript above is the record.
-- Commit `835412d` is the "data v2" version used by the repro demo; `99261fc` returns to v1.
+- **S3 push pending:** the `aws login` session expired, so `dvc push -r s3` for the current data could not run.
+  Re-run `aws login --region ap-southeast-2 --profile credit-risk`, then `dvc push -r s3`.
+- **DagsHub screenshot** shows `credit_default.csv` from the earlier layer. Retake it of
+  `data/raw/default_credit_card.csv` after this merge lands on `main`.
+- `dagshub_check.txt` and the merge-conflict doc describe the earlier layer's file names and hashes.
+- The real UCI file produces warnings, not failures, for undocumented codes (EDUCATION 0/5/6,
+  MARRIAGE 0, PAY -2/0) and reports 35 duplicate rows excluding ID (kept).

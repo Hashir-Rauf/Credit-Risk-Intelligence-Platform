@@ -2,20 +2,18 @@ $ dvc remote list
 s3      s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc (default)
 dagshub https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
 
-$ dvc status -c -r s3
-Cache and remote 's3' are in sync.
-
 $ dvc status -c -r dagshub
 Cache and remote 'dagshub' are in sync.
 
+$ dvc status -c -r s3
+(NOT re-run: AWS login session expired on 2026-11-15; see README note. Data was pushed to S3 before the merge for the earlier data versions.)
+
 $ dvc status
-validate:
-	changed outs:
-		modified:           reports\data_validation.json
+ingest:
+	changed deps:
+		modified:           src\data\ingestion.py
 
 $ dvc metrics show
-Path                          default_rate    n_columns    n_rows    passed
-reports\data_validation.json  0.2212          25           30000     True
 
 $ cat .dvc/config  (committed; no credentials)
 [core]
