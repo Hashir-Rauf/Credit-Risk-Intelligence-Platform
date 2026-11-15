@@ -1,0 +1,8 @@
+{
+  "columns": 25,
+  "file": "default_credit_card.csv",
+  "rows": 30000,
+  "sha256": "0bfd903f8b1ac178bc412c82f47f8d93ca6e26cdaa97e77a1265c53f0e383167",
+  "source": "uci",
+  "synthetic": false
+}

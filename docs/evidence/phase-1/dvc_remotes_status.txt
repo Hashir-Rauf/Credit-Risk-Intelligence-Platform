@@ -1,0 +1,29 @@
+$ dvc remote list
+s3      s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc (default)
+dagshub https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
+
+$ dvc status -c -r s3
+Cache and remote 's3' are in sync.
+
+$ dvc status -c -r dagshub
+Cache and remote 'dagshub' are in sync.
+
+$ dvc status
+validate:
+	changed outs:
+		modified:           reports\data_validation.json
+
+$ dvc metrics show
+Path                          default_rate    n_columns    n_rows    passed
+reports\data_validation.json  0.2212          25           30000     True
+
+$ cat .dvc/config  (committed; no credentials)
+[core]
+    analytics = false
+    remote = s3
+['remote "s3"']
+    url = s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc
+    region = ap-southeast-2
+['remote "dagshub"']
+    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
+    auth = basic

@@ -1,4 +1,5 @@
-# DVC pipeline. One owner for this file (@JA-Codex, per CODEOWNERS) to avoid merge conflicts.
+# DVC pipeline. One owner for this file (@Hashir-Rauf, per CODEOWNERS) to avoid merge conflicts;
+# @JA-Codex proposes new stages and Hashir adds them (docs/HANDOFF-JA-Codex.md).
 # Later cycles append: preprocess -> train -> evaluate. Parameters come from params.yaml.
 # Data versions are recorded in dvc.lock (commit it); the data itself lives in the DVC remote.
 stages:

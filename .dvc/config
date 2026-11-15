@@ -1,6 +1,9 @@
-# Shared DVC settings. Deliberately NO remote and NO credentials here.
-# Each environment adds its own remote, see docs/dvc-runbook.md:
-#   local dev     : dvc remote add -d --local localstore <path>        (-> .dvc/config.local, git-ignored)
-#   team (S3)     : dvc remote add -d storage s3://<bucket>/dvc        (once the bucket exists)
-#   DagsHub       : dvc remote add dagshub s3://dvc  (see runbook)
-# Credentials come from the AWS credential chain / DagsHub token env vars, never from this file.
+[core]
+    analytics = false
+    remote = s3
+['remote "s3"']
+    url = s3://credit-risk-dvc-922844966900-ap-southeast-2-an/dvc
+    region = ap-southeast-2
+['remote "dagshub"']
+    url = https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc
+    auth = basic

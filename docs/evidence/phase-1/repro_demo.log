@@ -1,0 +1,16 @@
+# Reproducibility demo - 2026-11-08T08:13:28Z
+# old version = commit 835412d (data v2, 29965 rows); current = 99261fc (data v1, 30000 rows)
+$ scripts/repro_demo.sh 835412d
+== current (feat/phase-1-data-dvc)
+recorded: a7e80c905840715d8456fe06d935f981  actual: a7e80c905840715d8456fe06d935f981
+== checking out 835412d
+recorded: 22e7b58a25ebb97573c8999aa4b7ef50  actual: 22e7b58a25ebb97573c8999aa4b7ef50
+OK: data at 835412d restored byte-for-byte
+== back to feat/phase-1-data-dvc
+recorded: a7e80c905840715d8456fe06d935f981  actual: a7e80c905840715d8456fe06d935f981
+exit code: 0
+
+# row counts per version (header excluded)
+835412d: 29965 rows, md5 22e7b58a25ebb97573c8999aa4b7ef50
+feat/phase-1-data-dvc: 30000 rows, md5 a7e80c905840715d8456fe06d935f981
+back on feat/phase-1-data-dvc

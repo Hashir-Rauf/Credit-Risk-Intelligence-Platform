@@ -1,0 +1,77 @@
+{
+  "columns": 25,
+  "errors": [],
+  "rows": 30000,
+  "status": "passed",
+  "target_rate": 0.2212,
+  "warnings": [
+    {
+      "column": "EDUCATION",
+      "counts": {
+        "0": 14,
+        "5": 280,
+        "6": 51
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "MARRIAGE",
+      "counts": {
+        "0": 54
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_1",
+      "counts": {
+        "-2": 2759,
+        "0": 14737
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_2",
+      "counts": {
+        "-2": 3782,
+        "0": 15730
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_3",
+      "counts": {
+        "-2": 4085,
+        "0": 15764
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_4",
+      "counts": {
+        "-2": 4348,
+        "0": 16455
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_5",
+      "counts": {
+        "-2": 4546,
+        "0": 16947
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "column": "PAY_6",
+      "counts": {
+        "-2": 4895,
+        "0": 16286
+      },
+      "type": "undocumented_codes"
+    },
+    {
+      "count": 35,
+      "type": "duplicate_rows_excluding_id"
+    }
+  ]
+}

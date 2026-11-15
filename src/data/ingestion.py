@@ -79,9 +79,12 @@ def normalize_columns(df: pd.DataFrame, params: dict[str, Any]) -> pd.DataFrame:
 
     for col in out.columns:
         series = out[col]
-        if pd.api.types.is_float_dtype(series) and series.notna().all():
-            if (series == series.round()).all():
-                out[col] = series.astype("int64")
+        if (
+            pd.api.types.is_float_dtype(series)
+            and series.notna().all()
+            and (series == series.round()).all()
+        ):
+            out[col] = series.astype("int64")
     return out
 
 
@@ -127,9 +130,11 @@ def _pick_table_in_zip(content: bytes) -> tuple[bytes, str]:
 def _download(url: str) -> bytes:
     if urlparse(url).scheme != "https":
         raise ConfigError("data.uci_url must use https")
-    request = urllib.request.Request(url, headers={"User-Agent": "credit-risk-platform-ingestion"})
+    request = urllib.request.Request(  # noqa: S310  (https enforced above)
+        url, headers={"User-Agent": "credit-risk-platform-ingestion"}
+    )
     try:
-        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_S) as response:
+        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_S) as response:  # noqa: S310
             content = response.read(MAX_DOWNLOAD_BYTES + 1)
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise IngestionError(f"download failed for {url}: {exc}") from exc

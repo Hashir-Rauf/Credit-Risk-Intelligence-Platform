@@ -7,4 +7,6 @@ pandas==3.1.1
 PyYAML==6.0.3
 pandera==0.35.0
 python-calamine==0.9.1  # reads the UCI .xls (pandas deprecates xlrd)
-boto3==1.43.126  # only used when data.source=s3
+boto3==1.43.117  # only used when data.source=s3; must match the botocore that dvc-s3 resolves
+dvc[s3]==3.67.1  # data versioning with S3 remote
+botocore[crt]==1.43.117  # CRT is required for `aws login` credentials

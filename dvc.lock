@@ -1,0 +1,137 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.data.ingestion
+    deps:
+    - path: src/common
+      hash: md5
+      md5: 8ef0396a42a38d5ca9ebe77f8978ce91.dir
+      size: 14497
+      nfiles: 7
+    - path: src/data/ingestion.py
+      hash: md5
+      md5: eb7b5caf6107998bcf28f774c42ff357
+      size: 9571
+    - path: src/data/paths.py
+      hash: md5
+      md5: a81763a0d7f76b503aff5d5e4a8817bd
+      size: 1022
+    - path: src/data/schema.py
+      hash: md5
+      md5: 8378039e642f70f2200bbd0dd3f0e382
+      size: 2286
+    - path: src/data/synthetic.py
+      hash: md5
+      md5: de62fcb2f2fa2ee0c196db1e54400308
+      size: 3494
+    params:
+      params.yaml:
+        data:
+          source: uci
+          uci_dataset_id: 350
+          uci_url: 
+            https://archive.ics.uci.edu/static/public/350/default+of+credit+card+clients.zip
+          s3_uri_env: RAW_DATA_S3_URI
+          local_path: data/external/default_credit_card_source.xls
+          synthetic_rows: 30000
+          raw_dir: data/raw
+          raw_filename: default_credit_card.csv
+          ingestion_report: reports/ingestion_report.json
+          processed_dir: data/processed
+          id_column: ID
+          target_column: default_next_month
+          timestamp_column: event_timestamp
+        seed: 42
+    outs:
+    - path: data/raw/default_credit_card.csv
+      hash: md5
+      md5: 6a4f15eead3dbd27b3cfd9e5243e1cba
+      size: 2867200
+    - path: reports/ingestion_report.json
+      hash: md5
+      md5: 6c6b3ad00c8fab3fe51fb2db4a3bd77f
+      size: 195
+  validate:
+    cmd: python -m src.data.validation
+    deps:
+    - path: data/raw/default_credit_card.csv
+      hash: md5
+      md5: 6a4f15eead3dbd27b3cfd9e5243e1cba
+      size: 2867200
+    - path: src/common
+      hash: md5
+      md5: 8ef0396a42a38d5ca9ebe77f8978ce91.dir
+      size: 14497
+      nfiles: 7
+    - path: src/data/paths.py
+      hash: md5
+      md5: a81763a0d7f76b503aff5d5e4a8817bd
+      size: 1022
+    - path: src/data/schema.py
+      hash: md5
+      md5: 8378039e642f70f2200bbd0dd3f0e382
+      size: 2286
+    - path: src/data/validation.py
+      hash: md5
+      md5: 3e73feb2adb22a3cb0063d8f2f320ca1
+      size: 6453
+    params:
+      params.yaml:
+        data.id_column: ID
+        data.raw_dir: data/raw
+        data.raw_filename: default_credit_card.csv
+        data.target_column: default_next_month
+        validation:
+          report_path: reports/validation_report.json
+          min_rows: 1000
+          target_rate_bounds:
+          - 0.05
+          - 0.6
+          domains:
+            SEX:
+            - 1
+            - 2
+            EDUCATION:
+            - 0
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+            MARRIAGE:
+            - 0
+            - 1
+            - 2
+            - 3
+          ranges:
+            LIMIT_BAL:
+            - 1
+            - 10000000
+            AGE:
+            - 18
+            - 100
+            PAY:
+            - -2
+            - 9
+            BILL_AMT:
+            - -10000000
+            - 10000000
+            PAY_AMT:
+            - 0
+            - 10000000
+          undocumented_codes:
+            EDUCATION:
+            - 0
+            - 5
+            - 6
+            MARRIAGE:
+            - 0
+            PAY:
+            - -2
+            - 0
+    outs:
+    - path: reports/validation_report.json
+      hash: md5
+      md5: 74d2bc0d0c25816af296abfb2e467fbd
+      size: 1304

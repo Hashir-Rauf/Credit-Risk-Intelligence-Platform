@@ -1,0 +1,10 @@
+# DagsHub check - 2026-11-08T08:23:31Z (token not shown)
+repo: Hashir-Rauf/Credit-Risk-Intelligence-Platform  private=False  mirror=True (mirrors the GitHub repo)
+branches mirrored: chore/phase-0-setup, feat/phase-1-data-dvc, main (+1 teammate branch)
+DVC remote 'dagshub' -> https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.dvc ; 'dvc status -c -r dagshub' -> in sync (data v1 and v2 pushed; see dvc_remotes_status.txt)
+MLflow endpoint https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform.mlflow authenticates (HTTP 200)
+
+# DagsHub content API, branch feat/phase-1-data-dvc, path data/raw:
+  data/raw/.gitkeep           versioning=git
+  data/raw/credit_default.csv versioning=dvc  hash=a7e80c905840715d8456fe06d935f981   <- matches dvc.lock / repro_demo.log
+# dvc.lock on that branch is readable through the API (HTTP 200).

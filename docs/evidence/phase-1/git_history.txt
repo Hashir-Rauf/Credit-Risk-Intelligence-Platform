@@ -1,0 +1,12 @@
+* 99261fc Hashir Rauf <hashirpriv04@gmail.com> | data: back to v1 (drop_duplicate_rows=false)
+* 835412d Hashir Rauf <hashirpriv04@gmail.com> | data: v2 - drop 35 duplicate rows (drop_duplicate_rows=true)
+* a45f506 Hashir Rauf <hashirpriv04@gmail.com> | feat(data): optional row filters (off by default) as extra data versions
+* 3686f25 Hashir Rauf <hashirpriv04@gmail.com> | docs: CODEOWNERS split, JA-Codex handoff and placeholders, phases owner flags; fix models/ gitignore
+* 3dcb882 Hashir Rauf <hashirpriv04@gmail.com> | feat(data): UCI ingestion, pandera validation, DVC pipeline with S3 and DagsHub remotes
+*   5631b60 JA-Codex <codexja@gmail.com> | Merge pull request #1 from Hashir-Rauf/chore/phase-0-setup
+|\  
+| * f7b21fb Hashir Rauf <jahangir.saleem.mughal@gmail.com> | chore: phase 0 setup - pre-commit config, project skeleton, AWS rules, memory update
+| * 699fac0 Hashir Rauf <jahangir.saleem.mughal@gmail.com> | Further stuff
+|/  
+* a9abd6d Hashir Rauf <jahangir.saleem.mughal@gmail.com> | LLMs config
+* 7dcdc7a Hashir Rauf <jahangir.saleem.mughal@gmail.com> | Initial

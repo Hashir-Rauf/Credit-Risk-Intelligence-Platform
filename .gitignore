@@ -55,7 +55,7 @@ data/external/*
 dvc_plots/
 
 # ---- Models & ML artifacts (registered via MLflow / DVC) --------------------
-models/
+/models/
 artifacts/
 *.pkl
 *.pickle
@@ -220,3 +220,6 @@ graphify-out/
 
 # Smoke/CI runs (synthetic data, never tracked)
 data/smoke/
+# ---- Evidence for grading is committed on purpose ---------------------------
+!docs/evidence/
+!docs/evidence/**

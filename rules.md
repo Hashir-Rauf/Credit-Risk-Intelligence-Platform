@@ -81,5 +81,6 @@ Hard constraints for everyone (humans and AI agents). Items marked **[SPEC]** co
 ## 11. For AI agents specifically
 - Follow `agents.md`. Ask before: destructive actions, cloud changes, force-pushes, `dvc gc`, dependency upgrades, large refactors, or anything touching `main`.
 - Don't invent results, metrics, URLs, resource IDs or file contents. Verify by running or reading.
+- Never add `Co-Authored-By: Claude` (or any AI attribution/"Generated with" line) to commits, PR descriptions or files. Commit history must reflect the team's own contributions.
 - Don't add features, services or abstractions the spec and plan don't call for.
 - When blocked or when requirements conflict (for example FastAPI vs. Flask in the spec), state the conflict and the assumption you're making, and record it in `memory.md`.

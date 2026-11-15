@@ -1,0 +1,57 @@
+{
+  "passed": false,
+  "n_rows": 20,
+  "n_columns": 25,
+  "failures": [
+    {
+      "column": "AGE",
+      "check": "in_range(18, 100)",
+      "count": 1,
+      "examples": [
+        "-5"
+      ]
+    },
+    {
+      "column": "LIMIT_BAL",
+      "check": "in_range(1, 5000000)",
+      "count": 1,
+      "examples": [
+        "-100"
+      ]
+    },
+    {
+      "column": "PAY_AMT1",
+      "check": "greater_than_or_equal_to(0)",
+      "count": 1,
+      "examples": [
+        "-1"
+      ]
+    },
+    {
+      "column": "SEX",
+      "check": "isin([1, 2])",
+      "count": 1,
+      "examples": [
+        "3"
+      ]
+    },
+    {
+      "column": "customer_id",
+      "check": "field_uniqueness",
+      "count": 2,
+      "examples": [
+        "5",
+        "5"
+      ]
+    },
+    {
+      "column": "default",
+      "check": "isin([0, 1])",
+      "count": 1,
+      "examples": [
+        "7"
+      ]
+    }
+  ],
+  "default_rate": 0.55
+}
