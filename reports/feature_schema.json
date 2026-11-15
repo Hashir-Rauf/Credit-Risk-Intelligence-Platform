@@ -1,0 +1,152 @@
+{
+  "decision_threshold": 0.5,
+  "engineered_server_side": [
+    "util_last",
+    "util_mean",
+    "util_max",
+    "pay_ratio_mean",
+    "pay_ratio_last",
+    "pay_delay_max",
+    "pay_delay_mean",
+    "months_delayed",
+    "bill_change_ratio",
+    "education_grouped"
+  ],
+  "excluded_sensitive": [
+    "SEX",
+    "MARRIAGE",
+    "AGE"
+  ],
+  "inputs": [
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": 1,
+      "name": "LIMIT_BAL"
+    },
+    {
+      "allowed": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "dtype": "integer",
+      "name": "EDUCATION"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_1"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_2"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_3"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_4"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_5"
+    },
+    {
+      "dtype": "integer",
+      "max": 9,
+      "min": -2,
+      "name": "PAY_6"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT1"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT2"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT3"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT4"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT5"
+    },
+    {
+      "dtype": "number",
+      "max": 5000000,
+      "min": -1000000,
+      "name": "BILL_AMT6"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT1"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT2"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT3"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT4"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT5"
+    },
+    {
+      "dtype": "number",
+      "max": 10000000,
+      "min": 0,
+      "name": "PAY_AMT6"
+    }
+  ],
+  "note": "Educational model, not a real lending decision.",
+  "schema_version": 1,
+  "target": "default"
+}

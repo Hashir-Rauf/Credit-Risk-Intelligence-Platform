@@ -5,8 +5,8 @@ stages:
     deps:
     - path: src/data/ingestion.py
       hash: md5
-      md5: 7ce65196c5585c19ded1e817dea343ca
-      size: 3575
+      md5: 7640d17c4dc5e294bfd455167421b584
+      size: 3677
     params:
       params.yaml:
         data.drop_duplicate_rows: false
@@ -31,8 +31,8 @@ stages:
       size: 2867198
     - path: src/data/validation.py
       hash: md5
-      md5: cfc580b7d202f739215450bdf899cd2d
-      size: 4637
+      md5: c2a8c35ed998515746f656f0cb2859da
+      size: 4765
     params:
       params.yaml:
         data.raw_path: data/raw/credit_default.csv
@@ -42,3 +42,232 @@ stages:
       hash: md5
       md5: 3b50c4ea7c115784c6fbd7177c3d3669
       size: 110
+  preprocess:
+    cmd: python -m src.features.preprocessing
+    deps:
+    - path: data/raw/credit_default.csv
+      hash: md5
+      md5: a7e80c905840715d8456fe06d935f981
+      size: 2867198
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 3b50c4ea7c115784c6fbd7177c3d3669
+      size: 110
+    - path: src/common
+      hash: md5
+      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
+      size: 39992
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 6e1bcc6b4288b53aceb9f117232f1664
+      size: 2957
+    - path: src/data/schema.py
+      hash: md5
+      md5: a1434eb7e2120a152b45302d7a69d539
+      size: 817
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    params:
+      params.yaml:
+        data.id_column: customer_id
+        data.processed_dir: data/processed
+        data.raw_path: data/raw/credit_default.csv
+        data.target_column: default
+        data.validation_report: reports/data_validation.json
+        evaluate.decision_threshold: 0.5
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+        seed: 42
+        split:
+          train: 0.7
+          val: 0.15
+          test: 0.15
+        validation.domains:
+          SEX:
+          - 1
+          - 2
+          EDUCATION:
+          - 0
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 6
+          MARRIAGE:
+          - 0
+          - 1
+          - 2
+          - 3
+        validation.ranges:
+          LIMIT_BAL:
+          - 1
+          - 5000000
+          AGE:
+          - 18
+          - 100
+          PAY:
+          - -2
+          - 9
+          BILL_AMT:
+          - -1000000
+          - 5000000
+          PAY_AMT:
+          - 0
+          - 10000000
+    outs:
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 91a789c7b259977261c4b694cc2c6c78
+      size: 539217
+    - path: reports/feature_schema.json
+      hash: md5
+      md5: 40c303e5c0c02b9b9257f7ab66a20619
+      size: 2569
+  train:
+    cmd: python -m src.models.train
+    deps:
+    - path: configs/model_params.yaml
+      hash: md5
+      md5: d050acc5359b0613ac6c1e28342573a0
+      size: 526
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 91a789c7b259977261c4b694cc2c6c78
+      size: 539217
+    - path: reports/feature_schema.json
+      hash: md5
+      md5: 40c303e5c0c02b9b9257f7ab66a20619
+      size: 2569
+    - path: src/common
+      hash: md5
+      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
+      size: 39992
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 6e1bcc6b4288b53aceb9f117232f1664
+      size: 2957
+    - path: src/data/schema.py
+      hash: md5
+      md5: a1434eb7e2120a152b45302d7a69d539
+      size: 817
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 370e9c9f04ae1530f952a79b4c402185
+      size: 8282
+    - path: src/models/tracking.py
+      hash: md5
+      md5: 9d71a9bda3f034fdf7c51179ee33ee0b
+      size: 4647
+    - path: src/models/train.py
+      hash: md5
+      md5: 5bd8837d9b26943b24076eda5fc29516
+      size: 7829
+    params:
+      params.yaml:
+        data.target_column: default
+        evaluate.decision_threshold: 0.5
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+        mlflow.experiment_name: credit-risk-default
+        seed: 42
+        train.algorithm: logistic_regression
+    outs:
+    - path: models/model.joblib
+      hash: md5
+      md5: d105fc926fd07f01a20a2cfa8d5781b4
+      size: 2979
+    - path: reports/metrics.json
+      hash: md5
+      md5: da94df98829f31b090ce517e913f8464
+      size: 1115
+    - path: reports/plots
+      hash: md5
+      md5: 9dbf230b7c825b24979ce348c5a19c94.dir
+      size: 85452
+      nfiles: 4
+  evaluate:
+    cmd: python -m src.models.evaluate
+    deps:
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: models/model.joblib
+      hash: md5
+      md5: d105fc926fd07f01a20a2cfa8d5781b4
+      size: 2979
+    - path: reports/metrics.json
+      hash: md5
+      md5: da94df98829f31b090ce517e913f8464
+      size: 1115
+    - path: src/common
+      hash: md5
+      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
+      size: 39992
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 6e1bcc6b4288b53aceb9f117232f1664
+      size: 2957
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 370e9c9f04ae1530f952a79b4c402185
+      size: 8282
+    - path: src/models/tracking.py
+      hash: md5
+      md5: 9d71a9bda3f034fdf7c51179ee33ee0b
+      size: 4647
+    params:
+      params.yaml:
+        data.target_column: default
+        evaluate:
+          decision_threshold: 0.5
+          evaluation_path: reports/evaluation.json
+          repro_tolerance: 1e-09
+        features.exclude_sensitive_from_model: true
+        gate:
+          roc_auc_min: 0.75
+    outs:
+    - path: reports/evaluation.json
+      hash: md5
+      md5: e082cabb6328fc9d71ec8f5c92a3ef42
+      size: 591
