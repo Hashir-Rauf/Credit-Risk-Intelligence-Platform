@@ -1,0 +1,273 @@
+{
+  "ablation": {
+    "algorithm": "random_forest",
+    "auc_gain_from_sensitive_inputs": -0.00031876936971630965,
+    "conclusion": "Adding SEX, MARRIAGE and AGE changes test ROC-AUC by -0.0003. That is below the 0.005 threshold, so excluding them costs nothing measurable.",
+    "with_sensitive_inputs": {
+      "disparities": {
+        "AGE_BAND": {
+          "approval_rate_gap": 0.07385725229826356,
+          "auc_gap": 0.08343867153870987,
+          "disparate_impact": 0.904490254191812,
+          "fpr_gap": 0.057679604798870854,
+          "n_groups": 4,
+          "tpr_gap": 0.10251171734166564
+        },
+        "MARRIAGE": {
+          "approval_rate_gap": 0.04581939799331103,
+          "auc_gap": 0.060630062351813785,
+          "disparate_impact": 0.9385650224215246,
+          "fpr_gap": 0.03203716866321102,
+          "n_groups": 3,
+          "tpr_gap": 0.03238866396761142
+        },
+        "SEX": {
+          "approval_rate_gap": 0.051279033198401436,
+          "auc_gap": 0.015910776305049,
+          "disparate_impact": 0.9328476833952036,
+          "fpr_gap": 0.04532442748091603,
+          "n_groups": 2,
+          "tpr_gap": 0.0290084799704331
+        }
+      },
+      "test_roc_auc": 0.7880262488309402
+    },
+    "without_sensitive_inputs": {
+      "disparities": {
+        "AGE_BAND": {
+          "approval_rate_gap": 0.07666624106230857,
+          "auc_gap": 0.08299402617732987,
+          "disparate_impact": 0.9008577632111219,
+          "fpr_gap": 0.06497388849682426,
+          "n_groups": 4,
+          "tpr_gap": 0.12786924648479747
+        },
+        "MARRIAGE": {
+          "approval_rate_gap": 0.041354115927910495,
+          "auc_gap": 0.0624099459976033,
+          "disparate_impact": 0.9442181340341654,
+          "fpr_gap": 0.032678605481684386,
+          "n_groups": 3,
+          "tpr_gap": 0.038660241921462446
+        },
+        "SEX": {
+          "approval_rate_gap": 0.047105400771092154,
+          "auc_gap": 0.016568106621572043,
+          "disparate_impact": 0.9378852966046203,
+          "fpr_gap": 0.04339434420541291,
+          "n_groups": 2,
+          "tpr_gap": 0.017288462723035525
+        }
+      },
+      "test_roc_auc": 0.7883450182006565
+    }
+  },
+  "algorithm": "random_forest",
+  "attributes": {
+    "AGE_BAND": {
+      "disparities": {
+        "approval_rate_gap": 0.07666624106230857,
+        "auc_gap": 0.08299402617732987,
+        "disparate_impact": 0.9008577632111219,
+        "fpr_gap": 0.06497388849682426,
+        "n_groups": 4,
+        "tpr_gap": 0.12786924648479747
+      },
+      "excluded_small_groups": {
+        "60+": 44
+      },
+      "groups": {
+        "30-39": {
+          "approval_rate": 0.7732954545454546,
+          "auc": 0.8015075170102317,
+          "default_rate": 0.19488636363636364,
+          "fpr": 0.13902611150317573,
+          "n": 1760,
+          "precision": 0.506265664160401,
+          "tpr": 0.5889212827988338
+        },
+        "40-49": {
+          "approval_rate": 0.7463157894736843,
+          "auc": 0.7668159927638978,
+          "default_rate": 0.23789473684210527,
+          "fpr": 0.15883977900552487,
+          "n": 950,
+          "precision": 0.5228215767634855,
+          "tpr": 0.5575221238938053
+        },
+        "50-59": {
+          "approval_rate": 0.696629213483146,
+          "auc": 0.7221509433962264,
+          "default_rate": 0.29775280898876405,
+          "fpr": 0.204,
+          "n": 356,
+          "precision": 0.5277777777777778,
+          "tpr": 0.5377358490566038
+        },
+        "<30": {
+          "approval_rate": 0.6992805755395683,
+          "auc": 0.8051449695735563,
+          "default_rate": 0.22589928057553957,
+          "fpr": 0.19423791821561337,
+          "n": 1390,
+          "precision": 0.5,
+          "tpr": 0.6656050955414012
+        }
+      }
+    },
+    "MARRIAGE": {
+      "disparities": {
+        "approval_rate_gap": 0.041354115927910495,
+        "auc_gap": 0.0624099459976033,
+        "disparate_impact": 0.9442181340341654,
+        "fpr_gap": 0.032678605481684386,
+        "n_groups": 3,
+        "tpr_gap": 0.038660241921462446
+      },
+      "excluded_small_groups": {
+        "0": 5
+      },
+      "groups": {
+        "1": {
+          "approval_rate": 0.7413541159279105,
+          "auc": 0.787901904314247,
+          "default_rate": 0.24062347783731125,
+          "fpr": 0.1565105837075048,
+          "n": 2053,
+          "precision": 0.5404896421845574,
+          "tpr": 0.5809716599190283
+        },
+        "2": {
+          "approval_rate": 0.7382943143812709,
+          "auc": 0.7895095140919461,
+          "default_rate": 0.2044314381270903,
+          "fpr": 0.1697320021019443,
+          "n": 2392,
+          "precision": 0.4840255591054313,
+          "tpr": 0.6196319018404908
+        },
+        "3": {
+          "approval_rate": 0.7,
+          "auc": 0.8503118503118503,
+          "default_rate": 0.26,
+          "fpr": 0.1891891891891892,
+          "n": 50,
+          "precision": 0.5333333333333333,
+          "tpr": 0.6153846153846154
+        }
+      }
+    },
+    "SEX": {
+      "disparities": {
+        "approval_rate_gap": 0.047105400771092154,
+        "auc_gap": 0.016568106621572043,
+        "disparate_impact": 0.9378852966046203,
+        "fpr_gap": 0.04339434420541291,
+        "n_groups": 2,
+        "tpr_gap": 0.017288462723035525
+      },
+      "excluded_small_groups": {},
+      "groups": {
+        "1": {
+          "approval_rate": 0.7112561174551386,
+          "auc": 0.7783003322083949,
+          "default_rate": 0.23436650353452965,
+          "fpr": 0.1903409090909091,
+          "n": 1839,
+          "precision": 0.4952919020715631,
+          "tpr": 0.6102088167053364
+        },
+        "2": {
+          "approval_rate": 0.7583615182262308,
+          "auc": 0.7948684388299669,
+          "default_rate": 0.212326193160466,
+          "fpr": 0.14694656488549618,
+          "n": 2661,
+          "precision": 0.52099533437014,
+          "tpr": 0.5929203539823009
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "attribute": "SEX",
+      "check": "disparate_impact",
+      "limit": 0.8,
+      "status": "passed",
+      "value": 0.9378852966046203
+    },
+    {
+      "attribute": "SEX",
+      "check": "tpr_gap",
+      "limit": 0.1,
+      "status": "passed",
+      "value": 0.017288462723035525
+    },
+    {
+      "attribute": "SEX",
+      "check": "auc_gap",
+      "limit": 0.05,
+      "status": "passed",
+      "value": 0.016568106621572043
+    },
+    {
+      "attribute": "AGE_BAND",
+      "check": "disparate_impact",
+      "limit": 0.8,
+      "status": "passed",
+      "value": 0.9008577632111219
+    },
+    {
+      "attribute": "AGE_BAND",
+      "check": "tpr_gap",
+      "limit": 0.1,
+      "status": "failed",
+      "value": 0.12786924648479747
+    },
+    {
+      "attribute": "AGE_BAND",
+      "check": "auc_gap",
+      "limit": 0.05,
+      "status": "failed",
+      "value": 0.08299402617732987
+    },
+    {
+      "attribute": "MARRIAGE",
+      "check": "disparate_impact",
+      "limit": 0.8,
+      "status": "passed",
+      "value": 0.9442181340341654
+    },
+    {
+      "attribute": "MARRIAGE",
+      "check": "tpr_gap",
+      "limit": 0.1,
+      "status": "passed",
+      "value": 0.038660241921462446
+    },
+    {
+      "attribute": "MARRIAGE",
+      "check": "auc_gap",
+      "limit": 0.05,
+      "status": "failed",
+      "value": 0.0624099459976033
+    }
+  ],
+  "enforced": false,
+  "failed_checks": [
+    "AGE_BAND.tpr_gap",
+    "AGE_BAND.auc_gap",
+    "MARRIAGE.auc_gap"
+  ],
+  "min_group_size": 50,
+  "notes": [
+    "Approval = predicted non-default at the decision threshold; tpr/fpr are rates of being flagged as a likely defaulter among actual defaulters / non-defaulters.",
+    "Group rates are estimates on the test split; small groups are excluded from gaps.",
+    "Excluding a sensitive input does not remove proxies for it; this report measures outcomes."
+  ],
+  "passed": false,
+  "sensitive_attributes_in_model": false,
+  "smoke": false,
+  "threshold": 0.5
+}

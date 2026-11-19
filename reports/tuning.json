@@ -1,0 +1,641 @@
+{
+  "families": {
+    "hist_gradient_boosting": {
+      "best_hyperparameters": {
+        "class_weight": "balanced",
+        "early_stopping": false,
+        "l2_regularization": 0.030347256558031725,
+        "learning_rate": 0.020034549085280202,
+        "max_depth": 5,
+        "max_iter": 350,
+        "min_samples_leaf": 20
+      },
+      "best_value": 0.7920631689116051,
+      "n_trials": 20,
+      "trials": [
+        {
+          "number": 0,
+          "params": {
+            "l2_regularization": 0.23634930706132062,
+            "learning_rate": 0.054669992642529426,
+            "max_depth": 2,
+            "max_iter": 300,
+            "min_samples_leaf": 97
+          },
+          "val_roc_auc": 0.7905063118732034
+        },
+        {
+          "number": 1,
+          "params": {
+            "l2_regularization": 0.0020428625330900156,
+            "learning_rate": 0.10790560028528427,
+            "max_depth": 2,
+            "max_iter": 150,
+            "min_samples_leaf": 11
+          },
+          "val_roc_auc": 0.7902472419157127
+        },
+        {
+          "number": 2,
+          "params": {
+            "l2_regularization": 0.34795129853244394,
+            "learning_rate": 0.02887542693241848,
+            "max_depth": 2,
+            "max_iter": 300,
+            "min_samples_leaf": 27
+          },
+          "val_roc_auc": 0.7891473057154531
+        },
+        {
+          "number": 3,
+          "params": {
+            "l2_regularization": 0.24712266831766125,
+            "learning_rate": 0.017196821401238165,
+            "max_depth": 4,
+            "max_iter": 400,
+            "min_samples_leaf": 36
+          },
+          "val_roc_auc": 0.791741732915648
+        },
+        {
+          "number": 4,
+          "params": {
+            "l2_regularization": 0.1031738711771857,
+            "learning_rate": 0.1399885806542344,
+            "max_depth": 6,
+            "max_iter": 250,
+            "min_samples_leaf": 23
+          },
+          "val_roc_auc": 0.7754110065305128
+        },
+        {
+          "number": 5,
+          "params": {
+            "l2_regularization": 0.6112678548951126,
+            "learning_rate": 0.10350347992186519,
+            "max_depth": 5,
+            "max_iter": 200,
+            "min_samples_leaf": 22
+          },
+          "val_roc_auc": 0.7827514175728858
+        },
+        {
+          "number": 6,
+          "params": {
+            "l2_regularization": 0.030347256558031725,
+            "learning_rate": 0.020034549085280202,
+            "max_depth": 5,
+            "max_iter": 350,
+            "min_samples_leaf": 20
+          },
+          "val_roc_auc": 0.7920631689116051
+        },
+        {
+          "number": 7,
+          "params": {
+            "l2_regularization": 1.4222309149370491,
+            "learning_rate": 0.018832095168958927,
+            "max_depth": 4,
+            "max_iter": 350,
+            "min_samples_leaf": 10
+          },
+          "val_roc_auc": 0.7915101900372046
+        },
+        {
+          "number": 8,
+          "params": {
+            "l2_regularization": 0.08314733771639135,
+            "learning_rate": 0.07372557849692192,
+            "max_depth": 6,
+            "max_iter": 350,
+            "min_samples_leaf": 31
+          },
+          "val_roc_auc": 0.7791270188316762
+        },
+        {
+          "number": 9,
+          "params": {
+            "l2_regularization": 0.16217283393250065,
+            "learning_rate": 0.059334780506475,
+            "max_depth": 8,
+            "max_iter": 350,
+            "min_samples_leaf": 34
+          },
+          "val_roc_auc": 0.7832054710069607
+        },
+        {
+          "number": 10,
+          "params": {
+            "l2_regularization": 8.812464739182147,
+            "learning_rate": 0.010171939494115495,
+            "max_depth": 8,
+            "max_iter": 500,
+            "min_samples_leaf": 94
+          },
+          "val_roc_auc": 0.7886078036401695
+        },
+        {
+          "number": 11,
+          "params": {
+            "l2_regularization": 0.01478629858602916,
+            "learning_rate": 0.2902121133448614,
+            "max_depth": 4,
+            "max_iter": 450,
+            "min_samples_leaf": 51
+          },
+          "val_roc_auc": 0.7573307335536454
+        },
+        {
+          "number": 12,
+          "params": {
+            "l2_regularization": 0.013236298867786937,
+            "learning_rate": 0.019885700409979248,
+            "max_depth": 4,
+            "max_iter": 450,
+            "min_samples_leaf": 18
+          },
+          "val_roc_auc": 0.7913232352920093
+        },
+        {
+          "number": 13,
+          "params": {
+            "l2_regularization": 0.015532697231921931,
+            "learning_rate": 0.010888637151108056,
+            "max_depth": 6,
+            "max_iter": 400,
+            "min_samples_leaf": 49
+          },
+          "val_roc_auc": 0.7912324819532756
+        },
+        {
+          "number": 14,
+          "params": {
+            "l2_regularization": 0.04116464804232873,
+            "learning_rate": 0.02969478600224152,
+            "max_depth": 3,
+            "max_iter": 500,
+            "min_samples_leaf": 16
+          },
+          "val_roc_auc": 0.7917332740736491
+        },
+        {
+          "number": 15,
+          "params": {
+            "l2_regularization": 0.004207290078621096,
+            "learning_rate": 0.016491149322673967,
+            "max_depth": 5,
+            "max_iter": 400,
+            "min_samples_leaf": 48
+          },
+          "val_roc_auc": 0.791976860049176
+        },
+        {
+          "number": 16,
+          "params": {
+            "l2_regularization": 0.0013512576495011523,
+            "learning_rate": 0.03379471667173833,
+            "max_depth": 7,
+            "max_iter": 100,
+            "min_samples_leaf": 64
+          },
+          "val_roc_auc": 0.7906671732413852
+        },
+        {
+          "number": 17,
+          "params": {
+            "l2_regularization": 0.004441089884689832,
+            "learning_rate": 0.014147233604005438,
+            "max_depth": 5,
+            "max_iter": 250,
+            "min_samples_leaf": 14
+          },
+          "val_roc_auc": 0.7918746370941728
+        },
+        {
+          "number": 18,
+          "params": {
+            "l2_regularization": 0.005116096635009789,
+            "learning_rate": 0.04309692409103712,
+            "max_depth": 5,
+            "max_iter": 400,
+            "min_samples_leaf": 68
+          },
+          "val_roc_auc": 0.7880998430096273
+        },
+        {
+          "number": 19,
+          "params": {
+            "l2_regularization": 0.038853068338360636,
+            "learning_rate": 0.02480641779279728,
+            "max_depth": 7,
+            "max_iter": 300,
+            "min_samples_leaf": 41
+          },
+          "val_roc_auc": 0.788666872163958
+        }
+      ]
+    },
+    "logistic_regression": {
+      "best_hyperparameters": {
+        "C": 10.48287430441546,
+        "class_weight": "balanced",
+        "max_iter": 1000
+      },
+      "best_value": 0.7633644685624987,
+      "n_trials": 20,
+      "trials": [
+        {
+          "number": 0,
+          "params": {
+            "C": 9.657312041008481,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633461171764673
+        },
+        {
+          "number": 1,
+          "params": {
+            "C": 0.30447867890228664,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7632486254381752
+        },
+        {
+          "number": 2,
+          "params": {
+            "C": 0.015145373374236562,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7618091885963341
+        },
+        {
+          "number": 3,
+          "params": {
+            "C": 19.265687760403562,
+            "class_weight": null
+          },
+          "val_roc_auc": 0.7578524577237113
+        },
+        {
+          "number": 4,
+          "params": {
+            "C": 0.0336442412271617,
+            "class_weight": null
+          },
+          "val_roc_auc": 0.7565799037985936
+        },
+        {
+          "number": 5,
+          "params": {
+            "C": 0.002920674497372624,
+            "class_weight": null
+          },
+          "val_roc_auc": 0.7511874637094174
+        },
+        {
+          "number": 6,
+          "params": {
+            "C": 0.0034980897535767564,
+            "class_weight": null
+          },
+          "val_roc_auc": 0.751869332396648
+        },
+        {
+          "number": 7,
+          "params": {
+            "C": 0.23240980638449343,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7631654707202202
+        },
+        {
+          "number": 8,
+          "params": {
+            "C": 0.009832294616512617,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7611800801439437
+        },
+        {
+          "number": 9,
+          "params": {
+            "C": 11.912815440854931,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633558663502964
+        },
+        {
+          "number": 10,
+          "params": {
+            "C": 60.42873107893033,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633421028107729
+        },
+        {
+          "number": 11,
+          "params": {
+            "C": 6.107445354003634,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.763297658047728
+        },
+        {
+          "number": 12,
+          "params": {
+            "C": 3.085483681321605,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.763274145334375
+        },
+        {
+          "number": 13,
+          "params": {
+            "C": 1.8783173666613826,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7632503458806157
+        },
+        {
+          "number": 14,
+          "params": {
+            "C": 93.16532153442428,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633412425895526
+        },
+        {
+          "number": 15,
+          "params": {
+            "C": 0.8691971506009171,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7632520663230561
+        },
+        {
+          "number": 16,
+          "params": {
+            "C": 10.48287430441546,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633644685624987
+        },
+        {
+          "number": 17,
+          "params": {
+            "C": 28.8507835540609,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7633022458942358
+        },
+        {
+          "number": 18,
+          "params": {
+            "C": 0.9933621490556447,
+            "class_weight": null
+          },
+          "val_roc_auc": 0.757976903060237
+        },
+        {
+          "number": 19,
+          "params": {
+            "C": 0.08950692564192415,
+            "class_weight": "balanced"
+          },
+          "val_roc_auc": 0.7629386590584879
+        }
+      ]
+    },
+    "random_forest": {
+      "best_hyperparameters": {
+        "class_weight": "balanced_subsample",
+        "max_depth": 9,
+        "max_features": "sqrt",
+        "min_samples_leaf": 2,
+        "n_estimators": 200,
+        "n_jobs": -1
+      },
+      "best_value": 0.79218417336325,
+      "n_trials": 20,
+      "trials": [
+        {
+          "number": 0,
+          "params": {
+            "max_depth": 6,
+            "max_features": "sqrt",
+            "min_samples_leaf": 7,
+            "n_estimators": 350
+          },
+          "val_roc_auc": 0.7894688850816134
+        },
+        {
+          "number": 1,
+          "params": {
+            "max_depth": 7,
+            "max_features": "sqrt",
+            "min_samples_leaf": 1,
+            "n_estimators": 150
+          },
+          "val_roc_auc": 0.7910267457114388
+        },
+        {
+          "number": 2,
+          "params": {
+            "max_depth": 9,
+            "max_features": "sqrt",
+            "min_samples_leaf": 2,
+            "n_estimators": 200
+          },
+          "val_roc_auc": 0.79218417336325
+        },
+        {
+          "number": 3,
+          "params": {
+            "max_depth": 14,
+            "max_features": 0.3,
+            "min_samples_leaf": 29,
+            "n_estimators": 250
+          },
+          "val_roc_auc": 0.7905987856543775
+        },
+        {
+          "number": 4,
+          "params": {
+            "max_depth": 12,
+            "max_features": 0.3,
+            "min_samples_leaf": 9,
+            "n_estimators": 100
+          },
+          "val_roc_auc": 0.7894905339823224
+        },
+        {
+          "number": 5,
+          "params": {
+            "max_depth": 16,
+            "max_features": 0.3,
+            "min_samples_leaf": 1,
+            "n_estimators": 100
+          },
+          "val_roc_auc": 0.7801641588828594
+        },
+        {
+          "number": 6,
+          "params": {
+            "max_depth": 17,
+            "max_features": "sqrt",
+            "min_samples_leaf": 1,
+            "n_estimators": 250
+          },
+          "val_roc_auc": 0.7838615330575847
+        },
+        {
+          "number": 7,
+          "params": {
+            "max_depth": 17,
+            "max_features": 0.5,
+            "min_samples_leaf": 8,
+            "n_estimators": 250
+          },
+          "val_roc_auc": 0.7872063599022215
+        },
+        {
+          "number": 8,
+          "params": {
+            "max_depth": 9,
+            "max_features": 0.3,
+            "min_samples_leaf": 4,
+            "n_estimators": 400
+          },
+          "val_roc_auc": 0.7919939211033772
+        },
+        {
+          "number": 9,
+          "params": {
+            "max_depth": 19,
+            "max_features": "sqrt",
+            "min_samples_leaf": 8,
+            "n_estimators": 150
+          },
+          "val_roc_auc": 0.7872037792385609
+        },
+        {
+          "number": 10,
+          "params": {
+            "max_depth": 4,
+            "max_features": 0.5,
+            "min_samples_leaf": 2,
+            "n_estimators": 350
+          },
+          "val_roc_auc": 0.7872472204101822
+        },
+        {
+          "number": 11,
+          "params": {
+            "max_depth": 10,
+            "max_features": 0.3,
+            "min_samples_leaf": 3,
+            "n_estimators": 400
+          },
+          "val_roc_auc": 0.7912428046079184
+        },
+        {
+          "number": 12,
+          "params": {
+            "max_depth": 9,
+            "max_features": "sqrt",
+            "min_samples_leaf": 3,
+            "n_estimators": 300
+          },
+          "val_roc_auc": 0.7912729123506261
+        },
+        {
+          "number": 13,
+          "params": {
+            "max_depth": 10,
+            "max_features": 0.3,
+            "min_samples_leaf": 3,
+            "n_estimators": 400
+          },
+          "val_roc_auc": 0.7912428046079184
+        },
+        {
+          "number": 14,
+          "params": {
+            "max_depth": 12,
+            "max_features": 0.5,
+            "min_samples_leaf": 2,
+            "n_estimators": 200
+          },
+          "val_roc_auc": 0.7894317521989405
+        },
+        {
+          "number": 15,
+          "params": {
+            "max_depth": 7,
+            "max_features": "sqrt",
+            "min_samples_leaf": 18,
+            "n_estimators": 300
+          },
+          "val_roc_auc": 0.7907526218825942
+        },
+        {
+          "number": 16,
+          "params": {
+            "max_depth": 4,
+            "max_features": 0.3,
+            "min_samples_leaf": 4,
+            "n_estimators": 200
+          },
+          "val_roc_auc": 0.7861310833769417
+        },
+        {
+          "number": 17,
+          "params": {
+            "max_depth": 13,
+            "max_features": 0.3,
+            "min_samples_leaf": 5,
+            "n_estimators": 350
+          },
+          "val_roc_auc": 0.7886707431594493
+        },
+        {
+          "number": 18,
+          "params": {
+            "max_depth": 9,
+            "max_features": "sqrt",
+            "min_samples_leaf": 2,
+            "n_estimators": 300
+          },
+          "val_roc_auc": 0.791687108868164
+        },
+        {
+          "number": 19,
+          "params": {
+            "max_depth": 6,
+            "max_features": 0.5,
+            "min_samples_leaf": 14,
+            "n_estimators": 200
+          },
+          "val_roc_auc": 0.790670184015656
+        }
+      ]
+    }
+  },
+  "metric": "val_roc_auc",
+  "n_trials": 20,
+  "seed": 42,
+  "selected": {
+    "algorithm": "random_forest",
+    "hyperparameters": {
+      "class_weight": "balanced_subsample",
+      "max_depth": 9,
+      "max_features": "sqrt",
+      "min_samples_leaf": 2,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "reason": "highest validation ROC-AUC (0.7922)",
+    "val_roc_auc": 0.79218417336325
+  },
+  "smoke": false
+}
