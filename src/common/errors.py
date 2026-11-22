@@ -27,3 +27,11 @@ class DataValidationError(PipelineError):
 
 class GateFailedError(PipelineError):
     """A model failed its minimum-performance gate and must not proceed to deployment."""
+
+
+class FeatureNotFoundError(PipelineError):
+    """A requested customer has no (complete) features in the feature store (serving: HTTP 404)."""
+
+    def __init__(self, message: str, missing: list[int] | None = None) -> None:
+        super().__init__(message)
+        self.missing = missing or []

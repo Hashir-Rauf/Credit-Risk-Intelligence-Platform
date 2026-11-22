@@ -11,7 +11,7 @@ import pytest
 import yaml
 from src.common.config import load_params, repo_root
 
-STAGE_ORDER = ("data", "preprocess", "train", "evaluate")
+STAGE_ORDER = ("data", "preprocess", "feast", "tune", "train", "evaluate")
 
 
 def isolate_params(params: dict[str, Any], base: Path) -> dict[str, Any]:
@@ -30,6 +30,40 @@ def isolate_params(params: dict[str, Any], base: Path) -> dict[str, Any]:
         last_run_path=str(base / "reports" / "last_run.json"),
     )
     params["evaluate"]["evaluation_path"] = str(base / "reports" / "evaluation.json")
+    # Tests default to the fast baseline; tuning tests switch to `tuned` explicitly.
+    params["train"]["algorithm"] = "logistic_regression"
+    # Feast is exercised by its own tests; the other tests read the parquet splits directly (fast).
+    params["features"]["use_feast_for_training"] = False
+    params["feast"].update(
+        data_dir=str(base / "feast"),
+        report_path=str(base / "reports" / "feast_report.json"),
+        parity_sample=50,
+    )
+    params["tune"].update(
+        n_trials=3,
+        smoke_n_trials=2,
+        results_path=str(base / "reports" / "tuning.json"),
+        comparison_path=str(base / "reports" / "model_comparison.md"),
+    )
+    params["promotion"].update(
+        decision_path=str(base / "reports" / "promotion.json"),
+        registration_path=str(base / "reports" / "registration.json"),
+    )
+    params["fairness"].update(
+        min_group_size=20, report_path=str(base / "reports" / "fairness.json")
+    )
+    params["explain"].update(
+        background_size=30,
+        importance_sample=30,
+        report_path=str(base / "reports" / "explanations.json"),
+        background_path=str(base / "models" / "explainer_background.parquet"),
+    )
+    params["simulate"].update(
+        batch_size=400,
+        reference_path=str(base / "reference" / "reference.parquet"),
+        batches_dir=str(base / "simulated"),
+        report_path=str(base / "reports" / "drift_scenarios.json"),
+    )
     params["smoke"].update(data_dir=str(base / "smoke"), n_rows=800)
     return params
 
@@ -45,17 +79,23 @@ def run_stages(
     params: dict[str, Any], upto: str = "evaluate", smoke: bool = False
 ) -> dict[str, Any]:
     """Run the pipeline stages in order (in-process) up to and including `upto`."""
-    from src.features import preprocessing
-    from src.models import evaluate, train
+    from src.features import feast_features, preprocessing
+    from src.models import evaluate, train, tune
 
     runners = {
         "data": lambda p, s: make_data(p, s),
         "preprocess": preprocessing.run,
+        "feast": feast_features.run,
+        "tune": tune.run,
         "train": train.run,
         "evaluate": evaluate.run,
     }
     results: dict[str, Any] = {}
     for name in STAGE_ORDER:
+        if name == "tune" and params["train"]["algorithm"] != "tuned" and upto != "tune":
+            continue  # tuning only feeds `train` when train.algorithm is "tuned"
+        if name == "feast" and not params["features"]["use_feast_for_training"] and upto != "feast":
+            continue  # the feature store is only needed when training reads from it
         results[name] = runners[name](params, smoke)
         if name == upto:
             break

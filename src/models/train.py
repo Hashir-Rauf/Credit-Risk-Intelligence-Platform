@@ -18,23 +18,26 @@ from typing import Any
 import joblib
 import pandas as pd
 from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
 from src.common.cli import stage_main
 from src.common.config import load_yaml, repo_root
 from src.common.errors import ConfigError, IngestionError
-from src.common.io import write_json
+from src.common.io import read_json, write_json
 from src.common.logging_utils import get_logger
 from src.common.seed import derive_seed
 from src.data.paths import (
+    comparison_path,
     feature_schema_path,
     last_run_path,
     metrics_path,
     model_path,
     plots_dir,
     split_path,
+    tuning_path,
 )
+from src.features.feast_features import attach_feast_features
 from src.features.preprocessing import SPLITS, build_pipeline, model_input_columns
 from src.models.evaluate import compute_metrics, save_plots
 from src.models.tracking import artifact_location, experiment_name, run_tags, tracking_uri
@@ -44,7 +47,10 @@ log = get_logger(__name__)
 MODEL_PARAMS_FILE = "configs/model_params.yaml"
 TRUSTED_TYPES = ["src.features.preprocessing.engineer_features"]
 # Tree node storage is produced by our own training run, so trusting it is safe for tree models.
-TREE_TYPES = ["sklearn.tree._tree.Tree"]
+TREE_TYPES = {
+    "random_forest": ["sklearn.tree._tree.Tree"],
+    "hist_gradient_boosting": ["sklearn.ensemble._hist_gradient_boosting.predictor.TreePredictor"],
+}
 
 
 def build_estimator(algorithm: str, hyperparameters: dict[str, Any], seed: int) -> BaseEstimator:
@@ -54,7 +60,22 @@ def build_estimator(algorithm: str, hyperparameters: dict[str, Any], seed: int) 
         return LogisticRegression(**hyperparameters, random_state=random_state)
     if algorithm == "random_forest":
         return RandomForestClassifier(**hyperparameters, random_state=random_state)
+    if algorithm == "hist_gradient_boosting":
+        return HistGradientBoostingClassifier(**hyperparameters, random_state=random_state)
     raise ConfigError(f"unknown algorithm {algorithm!r}")
+
+
+def resolve_model_choice(params: dict[str, Any], smoke: bool) -> tuple[str, dict[str, Any], bool]:
+    """(algorithm, hyperparameters, tuned). `train.algorithm: tuned` takes the tune stage's
+    winner; any other value uses the defaults in configs/model_params.yaml."""
+    algorithm = params["train"]["algorithm"]
+    if algorithm != "tuned":
+        return algorithm, dict(load_yaml(MODEL_PARAMS_FILE).get(algorithm) or {}), False
+    path = tuning_path(params, smoke)
+    if not path.is_file():
+        raise IngestionError(f"{path} not found (run the tune stage, or set train.algorithm)")
+    selected = read_json(path)["selected"]
+    return selected["algorithm"], dict(selected["hyperparameters"]), True
 
 
 def load_splits(params: dict[str, Any], smoke: bool) -> dict[str, pd.DataFrame]:
@@ -64,7 +85,9 @@ def load_splits(params: dict[str, Any], smoke: bool) -> dict[str, pd.DataFrame]:
         if not path.is_file():
             raise IngestionError(f"{path} not found (run the preprocess stage first)")
         frames[name] = pd.read_parquet(path)
-    return frames
+    return attach_feast_features(
+        frames, params, smoke
+    )  # no-op unless features.use_feast_for_training
 
 
 def _save_model(pipeline: Any, path: Path) -> None:
@@ -79,6 +102,7 @@ def _log_to_mlflow(
     smoke: bool,
     algorithm: str,
     hyperparameters: dict[str, Any],
+    tuned: bool,
     pipeline: Any,
     summary: dict[str, Any],
     sample: pd.DataFrame,
@@ -95,12 +119,13 @@ def _log_to_mlflow(
         mlflow.create_experiment(name, artifact_location=location)
     mlflow.set_experiment(name)
     with mlflow.start_run(run_name=f"{algorithm}-seed{params['seed']}") as active:
-        mlflow.set_tags(run_tags(params, smoke, algorithm))
+        mlflow.set_tags({**run_tags(params, smoke, algorithm), "run_type": "training"})
         mlflow.log_params(
             {
                 "algorithm": algorithm,
                 **{f"hp_{k}": v for k, v in hyperparameters.items()},
                 "seed": params["seed"],
+                "tuned": tuned,
                 "decision_threshold": params["evaluate"]["decision_threshold"],
                 "exclude_sensitive": params["features"]["exclude_sensitive_from_model"],
                 "n_model_features": summary["n_model_features"],
@@ -114,6 +139,9 @@ def _log_to_mlflow(
         mlflow.log_artifacts(str(plots_dir(params, smoke)), artifact_path="plots")
         for artifact in (metrics_path(params, smoke), feature_schema_path(params, smoke)):
             mlflow.log_artifact(str(artifact), artifact_path="reports")
+        if tuned:
+            for artifact in (tuning_path(params, smoke), comparison_path(params, smoke)):
+                mlflow.log_artifact(str(artifact), artifact_path="reports")
         mlflow.log_artifact(str(repo_root() / "params.yaml"), artifact_path="config")
         mlflow.log_artifact(str(repo_root() / MODEL_PARAMS_FILE), artifact_path="config")
 
@@ -128,15 +156,13 @@ def _log_to_mlflow(
             code_paths=[str(repo_root() / "src")],  # makes the model artifact self-contained
             # MLflow >= 3 serialises with skops, which refuses unknown types. Trust exactly the
             # one function our pipeline uses; anything else stays blocked.
-            skops_trusted_types=TRUSTED_TYPES
-            + (TREE_TYPES if algorithm == "random_forest" else []),
+            skops_trusted_types=TRUSTED_TYPES + TREE_TYPES.get(algorithm, []),
         )
         return active.info.run_id, model_info.model_uri
 
 
 def run(params: dict[str, Any], smoke: bool = False) -> dict[str, Any]:
-    algorithm = params["train"]["algorithm"]
-    hyperparameters = dict(load_yaml(MODEL_PARAMS_FILE).get(algorithm) or {})
+    algorithm, hyperparameters, tuned = resolve_model_choice(params, smoke)
     target = params["data"]["target_column"]
     columns = model_input_columns(params)
 
@@ -155,6 +181,8 @@ def run(params: dict[str, Any], smoke: bool = False) -> dict[str, Any]:
     }
     summary: dict[str, Any] = {
         "algorithm": algorithm,
+        "tuned": tuned,
+        "hyperparameters": hyperparameters,
         "seed": params["seed"],
         "smoke": smoke,
         "threshold": threshold,
@@ -175,6 +203,7 @@ def run(params: dict[str, Any], smoke: bool = False) -> dict[str, Any]:
         smoke,
         algorithm,
         hyperparameters,
+        tuned,
         pipeline,
         summary,
         test[columns].head(50),

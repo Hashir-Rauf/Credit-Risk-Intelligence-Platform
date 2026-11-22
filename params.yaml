@@ -40,6 +40,21 @@ validation:
     BILL_AMT: [-1000000, 5000000]
     PAY_AMT: [0, 10000000]
 
+feast:
+  # Feature store (Cycle 4): offline = parquet files, online = SQLite. Contract: docs/contracts-s1.md
+  project: credit_risk
+  repo_dir: feature_repo
+  data_dir: data/feast # sources, registry.db and online_store.db (smoke runs: data/smoke/feast)
+  entity_join_key: customer_id # = data.id_column (UCI ID)
+  # UCI has no timestamps: every customer gets a SIMULATED snapshot time in this window.
+  simulated_start: "2026-01-01"
+  simulated_days: 180
+  label_lag_days: 30 # training rows are looked up 30 days after the snapshot (default is next month)
+  ttl_days: 3650 # long on purpose: simulated timestamps are old by construction
+  max_null_fraction: 0.0 # feature-quality check
+  parity_sample: 200 # customers compared between source, offline and online stores
+  report_path: reports/feast_report.json
+
 split:
   train: 0.70
   val: 0.15
@@ -50,13 +65,95 @@ features:
   sensitive_columns: [SEX, MARRIAGE, AGE]
   exclude_sensitive_from_model: true
   schema_path: reports/feature_schema.json # what the scoring API accepts (names, dtypes, bounds)
+  # true: train/tune/evaluate read their raw features from the Feast offline store (point-in-time
+  # retrieval) instead of the parquet splits. Needs exclude_sensitive_from_model: true.
+  use_feast_for_training: true
 
 train:
-  algorithm: logistic_regression # logistic_regression | random_forest (hyperparameters: configs/model_params.yaml)
+  # logistic_regression | random_forest | hist_gradient_boosting use the defaults in configs/model_params.yaml.
+  # tuned = the winner (algorithm + hyperparameters) chosen by the tune stage (reports/tuning.json).
+  algorithm: tuned
   model_path: models/model.joblib
   metrics_path: reports/metrics.json
   plots_dir: reports/plots
   last_run_path: reports/last_run.json # MLflow run id etc.; machine-local, git-ignored
+
+tune:
+  # Optuna search per model family on the validation split; the test split is never used here.
+  families: [logistic_regression, random_forest, hist_gradient_boosting]
+  n_trials: 20 # per family (spec: >= 20 trials)
+  smoke_n_trials: 3
+  # Stratified k-fold ROC-AUC on TRAIN for each family's best hyperparameters (stability check
+  # reported next to the validation AUC; does not change which model wins). 0 = off.
+  cv_folds: 3
+  # A simpler model wins if it is within this much validation ROC-AUC of the best one.
+  simplicity_margin: 0.002
+  results_path: reports/tuning.json
+  comparison_path: reports/model_comparison.md
+
+promotion:
+  # A challenger replaces the champion only if, on the same test split:
+  min_auc_gain: 0.005 # ROC-AUC improves by at least this much, and
+  max_regression_drop: 0.01 # PR-AUC and KS each drop by at most this much, and
+  fairness_check: true # ...and no fairness regression versus the champion (see `fairness`), and
+  max_fairness_regression: 0.02 # no group gap (approval rate, TPR, FPR, AUC) grows by more than this
+  decision_path: reports/promotion.json
+  registration_path: reports/registration.json # written by `python -m src.models.registry`
+
+fairness:
+  # Group metrics on the test split for attributes the model does NOT use (rules.md section 2).
+  attributes: [SEX, AGE_BAND, MARRIAGE] # AGE_BAND is derived from AGE with age_band_edges
+  age_band_edges: [30, 40, 50, 60] # bands: <30, 30-39, 40-49, 50-59, 60+
+  min_group_size: 50 # smaller groups are listed but excluded from gaps (too noisy)
+  # Checks on the report. Reported always; they only fail the stage when enforce is true.
+  min_disparate_impact: 0.8 # lowest / highest approval rate (four-fifths rule)
+  max_tpr_gap: 0.10 # equal opportunity: spread of recall between groups
+  max_auc_gap: 0.05
+  enforce: false # false: findings are reported, a human decides (set true to exit 3 on failure)
+  run_ablation: true # also fit the same model WITH sensitive inputs to document the exclusion decision
+  ablation_min_auc_gain: 0.005 # below this, excluding them costs nothing measurable
+  report_path: reports/fairness.json
+
+explain:
+  background_size: 50 # training rows used as the SHAP background
+  importance_sample: 100 # test rows for global importance (tree models: SHAP is the slow part)
+  top_k: 5 # default number of factors per prediction
+  report_path: reports/explanations.json
+  background_path: models/explainer_background.parquet # serving needs this next to model.joblib
+
+simulate:
+  # Reference data and CONTROLLED, SIMULATED drift scenarios for the monitoring demo (rules.md
+  # section 9). Batches are resampled test rows with shifted features; labels stay the real ones.
+  batch_size: 1000
+  reference_path: data/reference/reference.parquet # train sample + model score + label
+  batches_dir: data/simulated
+  report_path: reports/drift_scenarios.json
+  psi_bins: 10
+  psi_threshold: 0.2 # a feature drifts when PSI >= this (0.1-0.25 = moderate, >0.25 = major)
+  drift_share_alert: 0.3 # alert when this share of monitored features drifted
+  scenarios:
+    - name: no_drift
+      description: Control batch drawn from the same distribution; must NOT alert.
+      expect_alert: false
+      changes: []
+    - name: limit_bal_inflation
+      description: Credit limits inflated by 60 percent (e.g. a new, wealthier customer segment).
+      expect_alert: false # one shifted feature is 5 percent of the 20 inputs: PSI flags it, the dataset alert stays quiet
+      changes:
+        - {columns: [LIMIT_BAL], op: multiply, value: 1.6}
+    - name: payment_delays
+      description: Payment status slips by two months and actual payments halve (economic shock).
+      expect_alert: true
+      changes:
+        - {columns: [PAY_1, PAY_2, PAY_3, PAY_4, PAY_5, PAY_6], op: add, value: 2}
+        - {columns: [PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6], op: multiply, value: 0.5}
+    - name: spending_surge
+      description: Bills and payments grow 2.5x while credit limits are halved (inflation plus tightening).
+      expect_alert: true
+      changes:
+        - {columns: [BILL_AMT1, BILL_AMT2, BILL_AMT3, BILL_AMT4, BILL_AMT5, BILL_AMT6], op: multiply, value: 2.5}
+        - {columns: [PAY_AMT1, PAY_AMT2, PAY_AMT3, PAY_AMT4, PAY_AMT5, PAY_AMT6], op: multiply, value: 2.5}
+        - {columns: [LIMIT_BAL], op: multiply, value: 0.5}
 
 evaluate:
   decision_threshold: 0.5 # used for precision/recall/confusion; class_weight=balanced makes 0.5 sensible
@@ -64,9 +161,10 @@ evaluate:
   repro_tolerance: 1.0e-9 # evaluate must reproduce the metrics recorded by train
 
 gate:
-  # Minimum test ROC-AUC for a model to proceed (rules.md §5). Re-baseline on the real data;
-  # never lower it just to make a run pass.
-  roc_auc_min: 0.75
+  # Minimum test ROC-AUC for a model to proceed (rules.md §5). Re-baselined on the real data:
+  # LR baseline 0.7675, tuned random_forest 0.7883 -> floor 0.77 (above the baseline, ~0.018 below
+  # the champion). Never lower it just to make a run pass.
+  roc_auc_min: 0.77
 
 mlflow:
   experiment_name: credit-risk-default

@@ -27,7 +27,7 @@ python -m src.<pkg>.<module> [--params params.yaml] [--smoke] [--log-level INFO]
 `--smoke` = tiny/fast mode for CI and tests. It always uses **synthetic** data (`smoke.n_rows` rows) and reads/writes only under `data/smoke/`, so it can never overwrite DVC-tracked `data/raw` or `reports/`. Never used for real runs. Seeds are applied before `run` from `params.yaml: seed`.
 
 ## 3. Parameters (Live)
-`params.yaml` is the single source of truth (seed, data source and paths, smoke settings, validation thresholds, split, sensitive columns, gate threshold, MLflow/registry names). It is validated on load; invalid files exit 1. Model hyperparameters live in `configs/model_params.yaml`. Only environment-variable **names** are committed (`configs/pipeline_config.yaml`, `data.s3_uri_env`). A relative `--params` path is resolved from the repository root, not the current directory.
+`params.yaml` is the single source of truth (seed, data source and paths, smoke settings, validation thresholds, split, sensitive columns, gate threshold, MLflow/registry names). It is validated on load; invalid files exit 1. Model hyperparameters live in `configs/model_params.yaml`. Only environment-variable **names** are committed (`configs/pipeline_config.yaml`). A relative `--params` path is resolved from the repository root, not the current directory.
 
 Data source: the UCI zip (`data.source_url`, SHA-256 pinned) via Hashir's `src.data.ingestion`, versioned with DVC. `python -m src.data.synthetic` writes UCI-shaped **synthetic** data under `data/smoke/` for CI and demos only.
 
@@ -50,27 +50,65 @@ Data source: the UCI zip (`data.source_url`, SHA-256 pinned) via Hashir's `src.d
 The UCI file has no row timestamps. Feast's `event_timestamp` and any "time-ordered" batches are **synthetic** and must be labelled simulated (rules.md §9). Synthetic data must never be reported as a result: the generator writes a `<csv>.provenance.json` sidecar, and the MLflow tag `data_source` is `synthetic` when it exists (`uci` otherwise).
 
 ## 5. DVC pipeline (Live, `dvc.yaml`)
-`ingest` (`python -m src.data.ingestion`) -> `validate` (`python -m src.data.validation`; **exits 1 on failed validation today, the contract in section 2 wants 2: Hashir to change**); then `preprocess` (`python -m src.features.preprocessing`) -> `train` (`python -m src.models.train`) -> `evaluate` (`python -m src.models.evaluate`, **exit 3 = gate failed, do not deploy**). One owner edits `dvc.yaml`; ask before changing it. Reproducibility demo and merge-conflict handling: `docs/dvc-merge-conflicts.md`, `docs/evidence/phase-1/`. Remotes (S3 default, DagsHub) are configured in `.dvc/config`; credentials stay in `.dvc/config.local`.
+`ingest` (`python -m src.data.ingestion`) -> `validate` (`python -m src.data.validation`; **exits 1 on failed validation today, the contract in section 2 wants 2: Hashir to change**); then `preprocess` (`python -m src.features.preprocessing`) -> `feast` (`python -m src.features.feast_features`, exit 2 if a feature-quality check fails) -> `tune` (`python -m src.models.tune`, Optuna over 3 model families) -> `train` (`python -m src.models.train`) -> `evaluate` (`python -m src.models.evaluate`, **exit 3 = gate failed, do not deploy**). One owner edits `dvc.yaml`; ask before changing it. Reproducibility demo and merge-conflict handling: `docs/dvc-merge-conflicts.md`, `docs/evidence/phase-1/`. Remotes (S3 default, DagsHub) are configured in `.dvc/config`; credentials stay in `.dvc/config.local`.
 
 **For the Airflow DAG:** `fetch_data` -> `python -m src.data.ingestion` (source `s3`) -> `python -m src.data.validation`; branch on the exit codes in section 2. The validation report in `reports/` is the artefact to attach to the run.
 
-## 6. Model registry (Planned, C3)
-- Registered model: `credit-risk-default-model`. Promotion = moving an **alias**; MLflow stages and a `Production` alias are not used.
-- `challenger`: newest candidate that passed the gate. `champion`: approved, currently deployed. Serving loads `models:/credit-risk-default-model@champion`.
-- Python helpers in `src/models/registry.py`: register, set alias, load by alias, `passes_gate(metrics, params)`.
+## 6. Model registry and promotion (Live, C3)
+- Registered model: `credit-risk-default-model` (`-smoke` suffix for `--smoke`). Promotion = moving an **alias**; MLflow stages and a `Production` alias are not used.
+- `python -m src.models.registry`: registers the latest evaluated model and points `challenger` at it. Exit 3 if the gate failed (do not deploy), 1 if `evaluation.json` is stale or missing. Idempotent per training run. Writes `reports/registration.json`.
+- `python -m src.models.promote`: scores `challenger` and `champion` on the **same test split** and promotes only if ROC-AUC improves by >= `promotion.min_auc_gain` (0.005), PR-AUC and KS each drop by <= `promotion.max_regression_drop` (0.01), and (from C5) the fairness report passes. Exit 0 = promoted, **exit 3 = not promoted** (champion untouched, reasons in `reports/promotion.json`). The first challenger becomes champion automatically.
+- `challenger`: newest candidate that passed the gate. `champion`: approved, currently deployed. **Serving loads `models:/credit-risk-default-model@champion`** (`src.models.registry.load_by_alias(params, "champion")` or plain `mlflow.sklearn.load_model`).
+- Both commands change MLflow state, not files, so they are not in `dvc.yaml`. Airflow retrain DAG: `dvc repro` (exit 3 = gate failed, stop) -> `registry` -> human approval -> `promote`.
+- Python helpers in `src/models/registry.py`: `passes_gate(metrics, params)`, `register_candidate`, `alias_version`, `load_by_alias`, `set_alias`.
 
 ## 7. Required MLflow run tags and params (Live, C2)
-`git_commit_sha`, `dvc_data_hash` (the raw CSV hash from `dvc.lock`), `data_source` (from the ingestion report), `feast_repo_commit` (spec §12.1), `algorithm`, `seed`, `smoke` (true/false), plus metrics (ROC-AUC, PR-AUC, KS, recall/precision at threshold) and training duration. Tracking URI comes from `$MLFLOW_TRACKING_URI` (default: local `mlflow.db`). `evaluate` adds the tag `gate_passed`. `feast_repo_commit` is a placeholder until C4. `reports/last_run.json` holds `{run_id, model_uri}` of the latest training run.
+`git_commit_sha`, `dvc_data_hash` (the raw CSV hash from `dvc.lock`), `data_source` (`synthetic` if the generator's sidecar exists, else `uci`), `feast_repo_commit` (spec §12.1), `algorithm`, `seed`, `smoke` (true/false), plus metrics (ROC-AUC, PR-AUC, KS, recall/precision at threshold) and training duration. Tracking URI comes from `$MLFLOW_TRACKING_URI` (default: local `mlflow.db`). `evaluate` adds the tag `gate_passed`. `feast_repo_commit` is a placeholder until C4. Training runs carry `run_type=training`; tuning runs `run_type=tuning` (with nested `tuning_family` runs). Registry versions carry tags `gate_passed`, `test_roc_auc`, `algorithm`, `git_commit_sha`, `dvc_data_hash`, `source_run_id`, `promotion_decision`. `reports/last_run.json` holds `{run_id, model_uri}` of the latest training run.
 
 ## 8. Sensitive attributes (Live config, enforced from C2)
 `SEX`, `MARRIAGE`, `AGE` are excluded from model inputs (`features.exclude_sensitive_from_model: true`) and used only for fairness reporting. They are not part of Feast training feature views.
 
 ## 8a. Model v0 and feature schema (Live, C2)
-- `models/model.joblib`: one sklearn pipeline (feature engineering -> scaler/one-hot -> estimator). Input: a DataFrame with the raw fields listed in `reports/feature_schema.json` (`LIMIT_BAL`, `EDUCATION`, `PAY_1..6`, `BILL_AMT1..6`, `PAY_AMT1..6`); output: `predict_proba(...)[:, 1]` = default probability. Engineered features are computed inside the model, so the API sends raw fields only.
+- `models/model.joblib`: one sklearn pipeline (the algorithm is whatever the tune stage selected; the contract below is the same for every family) (feature engineering -> scaler/one-hot -> estimator). Input: a DataFrame with the raw fields listed in `reports/feature_schema.json` (`LIMIT_BAL`, `EDUCATION`, `PAY_1..6`, `BILL_AMT1..6`, `PAY_AMT1..6`); output: `predict_proba(...)[:, 1]` = default probability. Engineered features are computed inside the model, so the API sends raw fields only.
 - `reports/feature_schema.json` lists each input with dtype, min/max, allowed values, plus `decision_threshold`. **Generate the API request validation from it.** `SEX`, `MARRIAGE`, `AGE` are not inputs; extra keys are ignored.
 - `src.models.inference`: `load_model`, `predict_proba(model, records)`, `predict(model, records, threshold)` for the Flask/BentoML layer. Raises `ValueError` on missing/non-numeric fields (map to HTTP 422).
 - The pickled model imports `src.features.preprocessing`; the serving image must include that file. The MLflow-logged model (`reports/last_run.json` -> `model_uri`) bundles `src/` itself.
 - Metrics in `reports/metrics.json` / `evaluation.json`: ROC-AUC, PR-AUC, KS, Brier, log-loss, precision/recall/F1 at the threshold. `src.models.evaluate.check_gate` is the gate (test ROC-AUC >= `gate.roc_auc_min`).
+
+## 8b. Feature store (Live, C4)
+- Feast repo: `feature_repo/` (definitions live in `src/features/feast_features.py`). Entity `customer_id`. Views: `payment_history` (PAY_1..6), `billing` (BILL_AMT1..6, PAY_AMT1..6), `account` (LIMIT_BAL, EDUCATION). They hold exactly the model's 20 raw inputs; engineered features are computed inside the model. SEX/MARRIAGE/AGE are never stored.
+- Offline store: parquet in `data/feast/source/` (DVC-tracked). Online store: SQLite `data/feast/online_store.db` + `registry.db` (DVC outputs of the `feast` stage; `python -m src.features.feast_features` rebuilds them from raw data in seconds).
+- **Serving by customer id:** `src.features.feast_features.get_online_features(params, [ids])` -> DataFrame of the 20 raw inputs, or `src.models.inference.predict_for_customers(model, params, ids, threshold)` -> `[{customer_id, probability, prediction}]`. Unknown customer -> `FeatureNotFoundError` (`.missing` lists the ids; answer **HTTP 404**). Requests that send raw fields keep using `inference.predict`.
+- The serving image needs Feast (pinned in `requirements.txt`), `src/`, `params.yaml` and the two SQLite files (or run the stage at image build / container start). Online-store packaging on Fargate is an open question for Hashir.
+- Training/tune/evaluate read their features from the offline store when `features.use_feast_for_training: true` (default); results are identical to the parquet path (tested).
+- **Timestamps are simulated** (rules.md §9): `event_timestamp` is a deterministic function of (seed, id) in `feast.simulated_start` + `simulated_days`. Never present it as real behaviour.
+- **Dependency note:** Feast requires `pandas<3`; the project is pinned to pandas 2.3.3 and Python 3.11.
+- MLflow tags added: `feast_repo_commit` (last git commit touching `feature_repo/` or `feast_features.py`, `+dirty` if edited; `$FEAST_REPO_COMMIT` overrides; hash fallback without git) and `features_from_feast`.
+
+## 8c. Fairness, explanations, simulated drift (Live, C5)
+- **Fairness:** `python -m src.models.fairness` -> `reports/fairness.json` (per attribute/group: n, default_rate, approval_rate, tpr, fpr, precision, auc; gaps; `checks`, `failed_checks`, `passed`, `ablation`). Reported, not enforced, unless `fairness.enforce: true` (then exit 3). Sensitive attributes are not model inputs; the report measures outcomes anyway.
+- **Promotion rule (changed):** `promote` also rejects a challenger whose gap (approval rate, TPR, FPR, AUC; per attribute) grew by more than `promotion.max_fairness_regression` versus the champion. Switch: `promotion.fairness_check`. The decision JSON has a `fairness` block. `require_fairness_report` no longer exists.
+- **Explanations:** `models/explainer_background.parquet` must ship next to `model.joblib`. `src.models.explain.explain_records(model, background, records, top_k)` takes the same raw fields as `/predict` and returns `[{probability, log_odds, base_value, factors:[{feature, label, value, contribution, direction}]}]` (log-odds; positive = higher risk; additive). Load the background with `load_background(path)`. SHAP is imported only for non-linear models but is in `requirements.txt` (pulls numba/llvmlite, about 100 MB: mind the serving image). Random forest costs about 0.17 s per explained row; request explanations only when asked.
+- **Drift (all SIMULATED):** `python -m src.models.drift` -> `data/reference/reference.parquet` (train-split model inputs + `score` + label), `data/simulated/<scenario>.parquet` (4 scenarios from `params.yaml simulate.scenarios`: `no_drift`, `limit_bal_inflation`, `payment_delays`, `spending_surge`), `reports/drift_scenarios.json`. `src.models.drift.psi / ks_statistic / drift_report` are plain functions the monitoring job can reuse (alert = share of features with PSI >= `psi_threshold` is >= `drift_share_alert`). An Evidently job can read the same parquet files.
+
+## 8d. Serving quick reference (Live; one page for Phase 4)
+Everything the Flask/BentoML layer needs, in one place. Details are in 8a, 8b, 8c.
+
+| Need | Use |
+|---|---|
+| Load the model | `src.models.registry.load_by_alias(params, "champion")` (MLflow) or `src.models.inference.load_model("models/model.joblib")` (file, for the image) |
+| Request fields | the 20 raw inputs in `reports/feature_schema.json`: `LIMIT_BAL`, `EDUCATION`, `PAY_1..6`, `BILL_AMT1..6`, `PAY_AMT1..6`. `SEX`, `MARRIAGE`, `AGE` are NOT accepted as inputs; extra keys are ignored |
+| Validation | build the request model from `feature_schema.json` (dtype, min/max, allowed values); `inference.records_to_frame` re-checks and raises `ValueError` |
+| Score raw fields | `inference.predict(model, records, threshold)` -> `[{probability, prediction}]`; threshold = `feature_schema.json: decision_threshold` |
+| Score by customer id | `inference.predict_for_customers(model, params, ids, threshold)` -> `[{customer_id, probability, prediction}]` |
+| Explain | `explain.explain_records(model, background, records, top_k)` -> per record `{probability, log_odds, base_value, factors: [{feature, label, value, contribution, direction}]}`; `background = explain.load_background("models/explainer_background.parquet")`, load it once at start-up |
+| Model info endpoint | `reports/metrics.json`, `reports/evaluation.json`, `reports/feature_schema.json`, MLflow tags (version, git SHA, DVC data hash) |
+
+HTTP mapping: `ValueError` -> 422; `FeatureNotFoundError` (`.missing`) -> 404; model not loadable -> 503.
+
+Image must contain: `src/`, `params.yaml`, `models/model.joblib`, `models/explainer_background.parquet`, `reports/feature_schema.json`, and (customer-id scoring only) `feature_repo/` plus the Feast SQLite files. Install from `requirements.lock.txt` (Linux, Python 3.11) so the library versions match the ones the model was trained with; scikit-learn, shap and optuna are pinned in `requirements.txt` for that reason.
+
+Latency note: tree models explain at about 0.17 s per row (SHAP permutation), logistic regression is exact and instant. Keep `/explain` a separate endpoint from `/predict`.
 
 ## 9. Handoffs to Hashir
 | Cycle | You get | Used by |
@@ -79,8 +117,9 @@ The UCI file has no row timestamps. Feast's `event_timestamp` and any "time-orde
 | C1 | Hashir's `src.data.ingestion` / `validation`, `python -m src.data.synthetic` (smoke data), `dvc.yaml` ingest->validate | Airflow fetch/validate tasks, CI smoke job (`--smoke` needs no data or credentials), DVC remote setup (S3 bucket, DagsHub) |
 | C2 | Model v0 artifact + `feature_schema.json` | Flask request schema, `/model-info`, Docker |
 | C3 | Registry helpers, alias names, gate function | Serving loader, KFP evaluate/register, CI gate |
-| C4 | Feast repo + `materialize.py` | Online retrieval in serving |
-| C5 | Challenger-vs-champion compare, drift-injection and reference data, explanations | Retrain DAG, Evidently job, frontend |
+| **C5 (now)** | `fairness`/`explain`/`drift` stages, `reports/fairness.json`, `explain_records` + `models/explainer_background.parquet`, reference + simulated drift parquet, `drift_scenarios.json`, fairness rule in `promote` | Retrain DAG (challenger vs champion, exit 3), Evidently job and simulate-drift button, frontend SHAP factors, serving image (shap dependency, background file) |
 
 **Asks from Hashir for C1:** (1) create the S3 bucket for the DVC remote and the raw-data object, then tell me the layout; (2) CI job idea: `pip install -r requirements-dev.txt && ruff check . && black --check . && pytest -q -m "not integration"` plus the two `--smoke` commands; (3) decide whether Airflow runs the stage CLIs directly (needs the repo and requirements in its image) or via `dvc repro`.
-| **C2 (now)** | `preprocess -> train -> evaluate` stages, `models/model.joblib`, `reports/feature_schema.json`, `src/models/inference.py`, MLflow run + exit-3 gate | Flask/BentoML serving, CI gate job (`--smoke` runs the whole chain without data), Dockerfile.ml, KFP train/evaluate components |
+| C2 | `preprocess -> train -> evaluate` stages, `models/model.joblib`, `reports/feature_schema.json`, `src/models/inference.py`, MLflow run + exit-3 gate | Flask/BentoML serving, CI gate job (`--smoke` runs the whole chain without data), Dockerfile.ml, KFP train/evaluate components |
+| C3 | `tune` stage, `reports/tuning.json` + `model_comparison.md`, `python -m src.models.registry` / `promote` (aliases `challenger`/`champion`, exit 3 = reject), `load_by_alias` | Serving (`@champion`), Airflow retrain DAG, KFP `train_tune`/`package_register` components, CI regression gate |
+| C4 | `feast` stage, `feature_repo/`, `get_online_features`, `predict_for_customers`, `FeatureNotFoundError` (404), `feast_repo_commit` MLflow tag | Serving `/predict` by customer id, Dockerfile.ml/serving (Feast dependency, online store files), Airflow `materialize` task (`python -m src.features.feast_features`) |
