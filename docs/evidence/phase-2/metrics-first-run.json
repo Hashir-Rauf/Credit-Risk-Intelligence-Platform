@@ -1,0 +1,57 @@
+{
+  "algorithm": "random_forest",
+  "hyperparameters": {
+    "class_weight": "balanced_subsample",
+    "max_depth": 9,
+    "max_features": "sqrt",
+    "min_samples_leaf": 2,
+    "n_estimators": 200,
+    "n_jobs": -1
+  },
+  "n_model_features": 32,
+  "seed": 42,
+  "sizes": {
+    "test": 4500,
+    "train": 21000,
+    "val": 4500
+  },
+  "smoke": false,
+  "test": {
+    "accuracy": 0.7835555555555556,
+    "brier": 0.16671900287170704,
+    "f1": 0.5511520737327188,
+    "fn": 398,
+    "fp": 576,
+    "ks": 0.4400547395059691,
+    "log_loss": 0.5125354272316999,
+    "n": 4500,
+    "positive_rate": 0.22133333333333333,
+    "pr_auc": 0.5782287884886254,
+    "precision": 0.5093696763202725,
+    "recall": 0.6004016064257028,
+    "roc_auc": 0.7883450182006565,
+    "threshold": 0.5,
+    "tn": 2928,
+    "tp": 598
+  },
+  "threshold": 0.5,
+  "tuned": true,
+  "val": {
+    "accuracy": 0.7768888888888889,
+    "brier": 0.16792570491690595,
+    "f1": 0.5461121157323688,
+    "fn": 391,
+    "fp": 613,
+    "ks": 0.44239743654076374,
+    "log_loss": 0.5154429170095826,
+    "n": 4500,
+    "positive_rate": 0.22111111111111112,
+    "pr_auc": 0.5739347305709003,
+    "precision": 0.49630238290879214,
+    "recall": 0.607035175879397,
+    "roc_auc": 0.79218417336325,
+    "threshold": 0.5,
+    "tn": 2892,
+    "tp": 604
+  }
+}

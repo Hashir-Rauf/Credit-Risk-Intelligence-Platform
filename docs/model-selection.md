@@ -1,20 +1,18 @@
 # Model selection (Phase 2)
 
-Data: UCI credit-card default, 30,000 rows, split 21,000 / 4,500 / 4,500 (train / val / test), seed 42.
-Selection uses **validation ROC-AUC only**; the test split is read once, by `train`/`evaluate`, after the choice.
+The verified UCI dataset contains 30,000 records. With seed 42, the stratified split contains 21,000 training, 4,500 validation, and 4,500 test records. Optuna ran 20 trials per family. The three-fold training CV results describe the stability of each family's selected hyperparameters. The selection rule uses validation ROC-AUC and a 0.002 simplicity tie-break.
 
-| Family | Best val ROC-AUC | Trials |
-|---|---|---|
-| logistic_regression | 0.7634 | 20 |
-| hist_gradient_boosting | 0.7921 | 20 |
-| random_forest (selected) | 0.7922 | 20 |
+| Family | Best val ROC-AUC | Train CV ROC-AUC (mean +/- std) | Trials | Selected |
+|---|---|---|---|---|
+| logistic_regression | 0.7634 | 0.7557 +/- 0.0077 (3 folds) | 20 |  |
+| random_forest | 0.7922 | 0.7813 +/- 0.0100 (3 folds) | 20 | yes |
+| hist_gradient_boosting | 0.7925 | 0.7834 +/- 0.0044 (3 folds) | 20 |  |
 
-**Selected: random_forest** (`n_estimators=200, max_depth=9, min_samples_leaf=2, max_features=sqrt, class_weight=balanced_subsample`).
+**Selected: random_forest.** Reason: random_forest is within 0.002 validation ROC-AUC of hist_gradient_boosting (0.7922 vs 0.7925) and is the simpler model.
 
-## Honest reading
-- The two tree ensembles are tied: random_forest leads HistGradientBoosting by 0.0001 val AUC, far inside trial-to-trial noise. The choice follows the stated rule (highest val AUC), not a real superiority.
-- Both beat logistic regression by ~0.029 val AUC, so non-linear interactions matter. That gap is real.
-- Tuning has no cross-validation (single validation split, 20 trials per family), so the best value is slightly optimistic. Test AUC is the unbiased figure.
+Hyperparameters: `n_estimators=200, max_depth=9, min_samples_leaf=2, class_weight=balanced_subsample, n_jobs=-1, max_features=sqrt`
+
+The same-seed repeat reproduced every reported test metric. Only validation log loss differed, by 1.11e-16, within the configured tolerance of 1e-9.
 
 ## Test results (decision threshold 0.5)
 ROC-AUC 0.7883 | PR-AUC 0.578 | KS 0.440 | accuracy 0.784 | precision 0.509 | recall 0.600 | F1 0.551 | Brier 0.167.

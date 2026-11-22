@@ -5,13 +5,13 @@ tags: [tabular-classification, credit-risk, scikit-learn, course-project]
 ---
 # Model card: credit-card default predictor
 
-Course project (MLOps). **Not a production credit decision system.** Values marked `<fill>` come from the registry/promote step on the real run.
+Course project (MLOps). **Not a production credit decision system.**
 
 ## Model details
 - Task: binary classification, probability that a customer defaults next month.
 - Algorithm: random forest (`n_estimators=200, max_depth=9, min_samples_leaf=2, max_features=sqrt, class_weight=balanced_subsample`), chosen by Optuna over 3 families (logistic regression, random forest, HistGradientBoosting). See `docs/model-selection.md`.
 - Packaging: one scikit-learn `Pipeline` (feature engineering, scaling and encoding, estimator). 20 raw inputs, listed in `reports/feature_schema.json`.
-- Registry: `credit-risk-default-model`, version `<fill>`, alias `champion`. Git SHA `<fill>`. DVC data hash `<fill>`. MLflow run `<fill>`.
+- Registry: `credit-risk-default-model`, version `1`, alias `champion`. MLflow training run `7b0c754e857240b49a8554e4d4bbe92f`. Git SHA `4d7a369f8d8c326daaa12165d6139b596bfbf0c2`. DVC raw-data MD5 `a7e80c905840715d8456fe06d935f981`.
 - Libraries: scikit-learn 1.9.1, Optuna 5.0.0, SHAP 0.51.0 (see `requirements.lock.txt`).
 
 ## Intended use

@@ -6,46 +6,46 @@
     "Sensitive attributes are not model inputs, so they never appear as factors."
   ],
   "example_highest_risk_test_row": {
-    "base_value": -0.474458491141901,
+    "base_value": -0.4744584911419008,
     "factors": [
       {
-        "contribution": 0.657136215497053,
+        "contribution": 0.6571362154970564,
         "direction": "increases risk",
         "feature": "months_delayed",
         "label": "Months with a delayed payment",
         "value": 3.30923538107166
       },
       {
-        "contribution": 0.5978483712245515,
+        "contribution": 0.5978483712245516,
         "direction": "increases risk",
         "feature": "PAY_1",
         "label": "Repayment status, month 1",
         "value": 1.79550759776741
       },
       {
-        "contribution": 0.4422287335992935,
+        "contribution": 0.4422287335992936,
         "direction": "increases risk",
         "feature": "pay_delay_mean",
         "label": "Average payment delay (months)",
         "value": 2.2118167573033443
       },
       {
-        "contribution": 0.4156734508359883,
+        "contribution": 0.4156734508359882,
         "direction": "increases risk",
         "feature": "pay_delay_max",
         "label": "Worst payment delay (months)",
         "value": 1.1607844722951695
       },
       {
-        "contribution": 0.14956110628366087,
+        "contribution": 0.1495611062836609,
         "direction": "increases risk",
         "feature": "PAY_2",
         "label": "Repayment status, month 2",
         "value": 1.781086761522265
       }
     ],
-    "log_odds": 2.536886005658406,
-    "probability": 0.9266875497504014
+    "log_odds": 2.5368860056584133,
+    "probability": 0.9266875497504019
   },
   "global_importance": [
     {
@@ -56,12 +56,12 @@
     {
       "feature": "months_delayed",
       "label": "Months with a delayed payment",
-      "mean_abs_contribution": 0.12678491887757262
+      "mean_abs_contribution": 0.12678491887757268
     },
     {
       "feature": "PAY_1",
       "label": "Repayment status, month 1",
-      "mean_abs_contribution": 0.10875387159345562
+      "mean_abs_contribution": 0.10875387159345566
     },
     {
       "feature": "pay_delay_mean",
@@ -76,42 +76,42 @@
     {
       "feature": "LIMIT_BAL",
       "label": "Credit limit",
-      "mean_abs_contribution": 0.06382942520450428
+      "mean_abs_contribution": 0.0638294252045043
     },
     {
       "feature": "BILL_AMT1",
       "label": "Bill amount, month 1",
-      "mean_abs_contribution": 0.0534386824669594
+      "mean_abs_contribution": 0.053438682466959396
     },
     {
       "feature": "util_mean",
       "label": "Credit utilisation, 6-month average",
-      "mean_abs_contribution": 0.04968534858274806
+      "mean_abs_contribution": 0.04968534858274807
     },
     {
       "feature": "PAY_AMT4",
       "label": "Payment amount, month 4",
-      "mean_abs_contribution": 0.0469787368489397
+      "mean_abs_contribution": 0.04697873684893969
     },
     {
       "feature": "util_last",
       "label": "Credit utilisation, latest month",
-      "mean_abs_contribution": 0.04534613753994977
+      "mean_abs_contribution": 0.04534613753994974
     },
     {
       "feature": "PAY_AMT2",
       "label": "Payment amount, month 2",
-      "mean_abs_contribution": 0.04260696357404661
+      "mean_abs_contribution": 0.042606963574046613
     },
     {
       "feature": "util_max",
       "label": "Credit utilisation, 6-month peak",
-      "mean_abs_contribution": 0.038737698393557174
+      "mean_abs_contribution": 0.03873769839355719
     },
     {
       "feature": "PAY_2",
       "label": "Repayment status, month 2",
-      "mean_abs_contribution": 0.038504271315951
+      "mean_abs_contribution": 0.03850427131595097
     },
     {
       "feature": "PAY_AMT6",
@@ -121,57 +121,57 @@
     {
       "feature": "PAY_AMT3",
       "label": "Payment amount, month 3",
-      "mean_abs_contribution": 0.03590221276984108
+      "mean_abs_contribution": 0.035902212769841076
     },
     {
       "feature": "pay_ratio_last",
       "label": "Share of bill paid, latest month",
-      "mean_abs_contribution": 0.03489148755195377
+      "mean_abs_contribution": 0.03489148755195379
     },
     {
       "feature": "pay_ratio_mean",
       "label": "Share of bill paid, 6-month average",
-      "mean_abs_contribution": 0.032625778038999416
+      "mean_abs_contribution": 0.03262577803899941
     },
     {
       "feature": "BILL_AMT2",
       "label": "Bill amount, month 2",
-      "mean_abs_contribution": 0.031661442308010275
+      "mean_abs_contribution": 0.03166144230801026
     },
     {
       "feature": "BILL_AMT3",
       "label": "Bill amount, month 3",
-      "mean_abs_contribution": 0.024779906218893012
+      "mean_abs_contribution": 0.02477990621889302
     },
     {
       "feature": "BILL_AMT5",
       "label": "Bill amount, month 5",
-      "mean_abs_contribution": 0.022679132770569446
+      "mean_abs_contribution": 0.022679132770569436
     },
     {
       "feature": "bill_change_ratio",
       "label": "Change in bill, latest vs earlier",
-      "mean_abs_contribution": 0.02169254437377022
+      "mean_abs_contribution": 0.021692544373770214
     },
     {
       "feature": "PAY_3",
       "label": "Repayment status, month 3",
-      "mean_abs_contribution": 0.019728688565598475
+      "mean_abs_contribution": 0.01972868856559848
     },
     {
       "feature": "BILL_AMT6",
       "label": "Bill amount, month 6",
-      "mean_abs_contribution": 0.019242035251660537
+      "mean_abs_contribution": 0.019242035251660527
     },
     {
       "feature": "PAY_AMT5",
       "label": "Payment amount, month 5",
-      "mean_abs_contribution": 0.018912788702957546
+      "mean_abs_contribution": 0.01891278870295752
     },
     {
       "feature": "BILL_AMT4",
       "label": "Bill amount, month 4",
-      "mean_abs_contribution": 0.017493532833773834
+      "mean_abs_contribution": 0.017493532833773827
     },
     {
       "feature": "PAY_4",
@@ -181,7 +181,7 @@
     {
       "feature": "PAY_6",
       "label": "Repayment status, month 6",
-      "mean_abs_contribution": 0.010405976241424557
+      "mean_abs_contribution": 0.010405976241424579
     },
     {
       "feature": "PAY_5",
@@ -191,7 +191,7 @@
     {
       "feature": "education_grouped_1",
       "label": "Education: graduate school",
-      "mean_abs_contribution": 0.00546365361277218
+      "mean_abs_contribution": 0.0054636536127721964
     },
     {
       "feature": "education_grouped_2",
@@ -201,12 +201,12 @@
     {
       "feature": "education_grouped_3",
       "label": "Education: high school",
-      "mean_abs_contribution": 0.0020678579153340167
+      "mean_abs_contribution": 0.002067857915334015
     },
     {
       "feature": "education_grouped_4",
       "label": "Education: other",
-      "mean_abs_contribution": 0.0010365709734268108
+      "mean_abs_contribution": 0.001036570973426814
     }
   ],
   "importance_rows": 100,

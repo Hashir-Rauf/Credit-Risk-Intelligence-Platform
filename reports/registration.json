@@ -1,7 +1,7 @@
 {
   "alias": "challenger",
   "model_name": "credit-risk-default-model",
-  "run_id": "b3884239acbb46168757b02c480fcdee",
+  "run_id": "7b0c754e857240b49a8554e4d4bbe92f",
   "smoke": false,
   "test_roc_auc": 0.7883450182006565,
   "version": "1"
