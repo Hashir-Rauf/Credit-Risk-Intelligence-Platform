@@ -98,6 +98,13 @@ def validate(df: pd.DataFrame) -> dict:
     return report
 
 
+def _write_report(path: Path, report: dict) -> None:
+    """LF newlines on every OS: DVC hashes this file, so CRLF on Windows would never match the
+    LF copy Git stores (and every other machine checks out)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes((json.dumps(report, indent=2) + "\n").encode("utf-8"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--params", default="params.yaml")
@@ -113,12 +120,10 @@ def main() -> None:
     try:
         report = validate(df)
     except DataValidationError as err:
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(err.report, indent=2) + "\n", encoding="utf-8")
+        _write_report(report_path, err.report)
         log.error("%s", err)
         sys.exit(1)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    _write_report(report_path, report)
     log.info(
         "Validation passed: %s rows, default rate %s", report["n_rows"], report["default_rate"]
     )
