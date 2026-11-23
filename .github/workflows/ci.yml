@@ -1,0 +1,150 @@
+# CI: every push and pull request is linted, tested, scanned and (once a Dockerfile exists)
+# built. The single job "CI passed" is the one to mark as a REQUIRED status check on `main`
+# (GitHub: Settings > Branches/Rules > Require status checks > "CI passed").
+#
+# Third-party actions are pinned to commit SHAs (supply-chain safety); the tag is in the comment.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11" # matches requirements.lock.txt (compiled for py3.11, linux)
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  lint:
+    name: Lint (ruff, black)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - name: Install lint tools
+        run: pip install "$(grep '^ruff==' requirements-ci.txt)" "$(grep '^black==' requirements-ci.txt)"
+      - run: ruff check .
+      - run: black --check .
+
+  test:
+    name: Tests (pytest + coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.lock.txt
+            requirements-ci.txt
+      - name: Install locked dependencies
+        run: pip install -r requirements.lock.txt -r requirements-ci.txt
+      - name: Run tests (fails under the coverage minimum in pyproject.toml)
+        run: >
+          pytest -p no:cacheprovider --cov --cov-report=term-missing --cov-report=xml
+          --junitxml=junit.xml
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            junit.xml
+            coverage.xml
+          retention-days: 14
+
+  security:
+    name: Security (bandit, pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - name: Install scanners
+        run: pip install "$(grep '^bandit==' requirements-ci.txt)" "$(grep '^pip-audit==' requirements-ci.txt)"
+      - name: bandit (medium severity and above fails the build)
+        run: bandit -r src -c pyproject.toml -ll
+      - name: pip-audit (known vulnerabilities in locked dependencies)
+        # Accepted risks are listed in docs/security.md with a reason; each needs an ID here.
+        #   PYSEC-2026-2447: diskcache (via dvc-data), pickle cache read needs local write access.
+        run: >
+          pip-audit -r requirements.lock.txt --no-deps --disable-pip -s osv
+          --ignore-vuln PYSEC-2026-2447
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0 # scan full history, not just the tip
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Docker build + Trivy scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Detect Dockerfile
+        id: detect
+        run: |
+          if [ -f docker/Dockerfile.api ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; echo "No docker/Dockerfile.api yet (added in Phase 4); skipping."; fi
+      - name: Build image
+        if: steps.detect.outputs.present == 'true'
+        run: docker build -f docker/Dockerfile.api -t credit-risk-api:ci .
+      - name: Trivy scan (HIGH and CRITICAL with a fix available fail the build)
+        if: steps.detect.outputs.present == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: credit-risk-api:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  ci-passed:
+    name: CI passed
+    # Single aggregate check: make THIS the required status check on main.
+    if: always()
+    needs: [lint, test, security, secrets, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to have succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then echo "A required job did not succeed ($r)"; exit 1; fi
+          done

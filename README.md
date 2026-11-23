@@ -1,5 +1,7 @@
 # Credit Risk Intelligence Platform
 
+[![CI](https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform/actions/workflows/ci.yml)
+
 End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project (3 students).
 
 > Status: Phase 1 done; Phase 2 code complete (features, tuning, MLflow, registry, Feast, fairness, explanations, drift simulation); real-data results and docs pending. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).

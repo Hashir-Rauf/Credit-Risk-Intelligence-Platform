@@ -1,0 +1,8 @@
+# Tools CI installs on top of requirements.lock.txt. Pinned (rules.md section 3).
+# Bump deliberately: change here, run `make lint test` locally, open a PR.
+pytest==9.2.0
+pytest-cov==7.1.0
+ruff==0.17.5
+black==26.10.1
+bandit==1.9.4
+pip-audit==2.10.1

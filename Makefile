@@ -1,4 +1,4 @@
-.PHONY: help setup lint format test repro up down clean
+.PHONY: help setup lint format test security repro up down clean
 
 PY ?= python
 
@@ -20,6 +20,10 @@ format:  ## Auto-format
 
 test:  ## Run tests with coverage
 	pytest --cov
+
+security:  ## bandit + pip-audit (same as CI)
+	bandit -r src -c pyproject.toml -ll
+	pip-audit -r requirements.lock.txt --no-deps --disable-pip -s osv --ignore-vuln PYSEC-2026-2447
 
 repro:  ## Run the DVC pipeline
 	dvc repro
