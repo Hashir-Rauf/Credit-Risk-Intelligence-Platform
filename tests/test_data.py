@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from src.data.ingestion import ChecksumError, apply_row_filters, sha256_bytes, zip_to_frame
-from src.data.validation import DataValidationError, validate
+from src.data.validation import DataValidationError, _write_report, validate
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -129,3 +129,12 @@ def test_drop_unknown_education_keeps_only_documented_codes(good):
     out = apply_row_filters(good, {"drop_unknown_education": True})
     assert out["EDUCATION"].isin([1, 2, 3, 4]).all()
     assert len(out) < len(good)
+
+
+def test_report_is_written_with_lf_newlines_on_every_os(tmp_path):
+    """DVC hashes this file; CRLF (Windows write_text) made dvc.lock unreproducible elsewhere."""
+    target = tmp_path / "nested" / "report.json"
+    _write_report(target, {"passed": True, "failures": []})
+    raw = target.read_bytes()
+    assert b"\r" not in raw
+    assert raw.endswith(b"\n")
