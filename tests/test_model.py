@@ -439,10 +439,26 @@ class TestDvcWiring:
         return yaml.safe_load((repo_root() / "dvc.yaml").read_text(encoding="utf-8"))["stages"]
 
     def test_stage_order_and_commands(self, dvc):
-        assert list(dvc) == ["ingest", "validate", "preprocess", "train", "evaluate"]
+        assert list(dvc) == [
+            "ingest",
+            "validate",
+            "preprocess",
+            "feast",
+            "tune",
+            "train",
+            "evaluate",
+            "fairness",
+            "explain",
+            "drift",
+        ]
         for name, module in (
             ("preprocess", "src.features.preprocessing"),
+            ("feast", "src.features.feast_features"),
+            ("tune", "src.models.tune"),
             ("train", "src.models.train"),
+            ("fairness", "src.models.fairness"),
+            ("explain", "src.models.explain"),
+            ("drift", "src.models.drift"),
             ("evaluate", "src.models.evaluate"),
         ):
             assert dvc[name]["cmd"] == f"python -m {module}"
@@ -491,7 +507,7 @@ class TestDvcWiring:
             for out in stage.get("outs", []) + stage.get("metrics", []):
                 if isinstance(out, dict):
                     ((path, opts),) = out.items()
-                    assert path.endswith(".json") and opts == {"cache": False}
+                    assert path.endswith((".json", ".md")) and opts == {"cache": False}
 
 
 # --------------------------------------------------------------------------- real DVC end to end
@@ -549,6 +565,8 @@ class TestDvcRepro:
         spec = yaml.safe_load(dvc_file.read_text())
         spec["stages"].pop("ingest")
         dvc_file.write_text(yaml.safe_dump(spec, sort_keys=False))
+        data["tune"]["n_trials"] = 2
+        params_file.write_text(yaml.safe_dump(data))
         for cmd in (["git", "init", "-q"], [dvc_bin, "init", "-q", "--no-scm", "-f"]):
             sh(*cmd)
         # --no-scm re-init would drop our .dvc/config; restore it from the copy
@@ -557,6 +575,8 @@ class TestDvcRepro:
         first = sh(dvc_bin, "repro")
         assert first.returncode == 0, first.stdout + first.stderr
         assert (work / "models" / "model.joblib").is_file()
+        assert (work / "reports" / "tuning.json").is_file()
+        assert (work / "reports" / "model_comparison.md").is_file()
         assert json.loads((work / "reports" / "evaluation.json").read_text())["gate"]["passed"]
 
         again = sh(dvc_bin, "repro")

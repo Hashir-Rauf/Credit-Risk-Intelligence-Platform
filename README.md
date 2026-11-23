@@ -2,7 +2,7 @@
 
 End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project (3 students).
 
-> Status: Phase 1 done; Phase 2 baseline (features, train, evaluate, MLflow, gate) merged; tuning, registry, Feast, fairness pending. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
+> Status: Phase 1 done; Phase 2 code complete (features, tuning, MLflow, registry, Feast, fairness, explanations, drift simulation); real-data results and docs pending. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
 
 ## Dataset
 UCI *Default of Credit Card Clients* (30,000 rows, 23 features). Source: https://archive.ics.uci.edu/dataset/350. Used for coursework only; not a real lending decision tool.
@@ -25,7 +25,7 @@ cp .env.example .env  # then fill in values (never commit .env)
 Data is versioned with DVC (not stored in git). Remotes: `s3` (default) and `dagshub`.
 ```bash
 dvc pull -r dagshub   # or: dvc pull   (S3; needs AWS profile `credit-risk`, see .env.example)
-dvc repro             # ingest -> validate -> preprocess -> train -> evaluate (exit 3 = gate failed)
+dvc repro             # ingest -> validate -> preprocess -> feast -> tune -> train -> evaluate -> fairness, explain, drift (exit 3 = gate failed)
 dvc dag
 ```
 Remote credentials live in the gitignored `.dvc/config.local`:
@@ -36,7 +36,9 @@ dvc remote modify --local dagshub password <dagshub-token>
 ```
 CI-style smoke run (no data or credentials needed):
 ```bash
-for m in src.data.synthetic src.features.preprocessing src.models.train src.models.evaluate; do python -m $m --smoke; done
+for m in src.data.synthetic src.features.preprocessing src.features.feast_features src.models.tune src.models.train src.models.evaluate; do python -m $m --smoke; done
+python -m src.models.registry   # register the evaluated model as `challenger`
+python -m src.models.promote    # challenger -> champion if it wins (exit 3 if not)
 mlflow ui --backend-store-uri sqlite:///mlflow.db   # browse runs
 ```
 Later phases add: `make up`, deployment and teardown instructions.

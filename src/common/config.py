@@ -11,7 +11,8 @@ import yaml
 from src.common.errors import ConfigError
 
 DEFAULT_PARAMS_FILE = "params.yaml"
-VALID_ALGORITHMS = ("logistic_regression", "random_forest")
+MODEL_FAMILIES = ("logistic_regression", "random_forest", "hist_gradient_boosting")
+VALID_ALGORITHMS = (*MODEL_FAMILIES, "tuned")
 REQUIRED_DOMAINS = ("SEX", "EDUCATION", "MARRIAGE")
 REQUIRED_RANGES = ("LIMIT_BAL", "AGE", "PAY", "BILL_AMT", "PAY_AMT")
 
@@ -34,6 +35,18 @@ REQUIRED_KEYS = (
     "features.sensitive_columns",
     "features.exclude_sensitive_from_model",
     "features.schema_path",
+    "features.use_feast_for_training",
+    "feast.project",
+    "feast.repo_dir",
+    "feast.data_dir",
+    "feast.entity_join_key",
+    "feast.simulated_start",
+    "feast.simulated_days",
+    "feast.label_lag_days",
+    "feast.ttl_days",
+    "feast.max_null_fraction",
+    "feast.parity_sample",
+    "feast.report_path",
     "train.algorithm",
     "train.model_path",
     "train.metrics_path",
@@ -43,6 +56,41 @@ REQUIRED_KEYS = (
     "evaluate.evaluation_path",
     "evaluate.repro_tolerance",
     "gate.roc_auc_min",
+    "tune.families",
+    "tune.n_trials",
+    "tune.smoke_n_trials",
+    "tune.simplicity_margin",
+    "tune.results_path",
+    "tune.comparison_path",
+    "promotion.min_auc_gain",
+    "promotion.max_regression_drop",
+    "promotion.fairness_check",
+    "promotion.max_fairness_regression",
+    "fairness.attributes",
+    "fairness.age_band_edges",
+    "fairness.min_group_size",
+    "fairness.min_disparate_impact",
+    "fairness.max_tpr_gap",
+    "fairness.max_auc_gap",
+    "fairness.enforce",
+    "fairness.run_ablation",
+    "fairness.ablation_min_auc_gain",
+    "fairness.report_path",
+    "explain.background_size",
+    "explain.importance_sample",
+    "explain.top_k",
+    "explain.report_path",
+    "explain.background_path",
+    "simulate.batch_size",
+    "simulate.reference_path",
+    "simulate.batches_dir",
+    "simulate.report_path",
+    "simulate.psi_bins",
+    "simulate.psi_threshold",
+    "simulate.drift_share_alert",
+    "simulate.scenarios",
+    "promotion.decision_path",
+    "promotion.registration_path",
     "mlflow.experiment_name",
     "mlflow.tracking_uri_env",
     "mlflow.default_tracking_uri",
@@ -199,6 +247,149 @@ def _validate_training_sections(params: dict[str, Any], errors: list[str]) -> No
 
     if not str(get_param(params, "mlflow.default_tracking_uri")).strip():
         errors.append("mlflow.default_tracking_uri must not be empty")
+
+    _validate_feast_section(params, errors)
+
+    families = get_param(params, "tune.families")
+    if not (isinstance(families, list) and families and set(families) <= set(MODEL_FAMILIES)):
+        errors.append(f"tune.families must be a non-empty list drawn from {MODEL_FAMILIES}")
+    for key in ("tune.n_trials", "tune.smoke_n_trials"):
+        value = get_param(params, key)
+        if not (isinstance(value, int) and not isinstance(value, bool) and value >= 1):
+            errors.append(f"{key} must be an integer >= 1")
+    folds = get_param(params, "tune.cv_folds", None)
+    if folds is not None and not (
+        isinstance(folds, int) and not isinstance(folds, bool) and (folds == 0 or 2 <= folds <= 10)
+    ):
+        errors.append("tune.cv_folds must be 0 (off) or an integer from 2 to 10")
+    margin = get_param(params, "tune.simplicity_margin")
+    if not (_is_number(margin) and 0 <= margin < 0.05):
+        errors.append("tune.simplicity_margin must be a number in [0, 0.05)")
+    gain = get_param(params, "promotion.min_auc_gain")
+    if not (_is_number(gain) and 0 <= gain < 0.5):
+        errors.append("promotion.min_auc_gain must be a number in [0, 0.5)")
+    drop = get_param(params, "promotion.max_regression_drop")
+    if not (_is_number(drop) and 0 <= drop < 0.5):
+        errors.append("promotion.max_regression_drop must be a number in [0, 0.5)")
+    if not isinstance(get_param(params, "promotion.fairness_check"), bool):
+        errors.append("promotion.fairness_check must be true or false")
+    tolerance = get_param(params, "promotion.max_fairness_regression")
+    if not (_is_number(tolerance) and 0 <= tolerance < 0.5):
+        errors.append("promotion.max_fairness_regression must be a number in [0, 0.5)")
+    _validate_cycle5_sections(params, errors)
+
+
+def _validate_feast_section(params: dict[str, Any], errors: list[str]) -> None:
+    """Checks for the feature-store settings added in Cycle 4."""
+    from datetime import date
+
+    use_feast = get_param(params, "features.use_feast_for_training")
+    if not isinstance(use_feast, bool):
+        errors.append("features.use_feast_for_training must be true or false")
+    elif use_feast and not get_param(params, "features.exclude_sensitive_from_model"):
+        errors.append(
+            "features.use_feast_for_training needs features.exclude_sensitive_from_model: true "
+            "(sensitive attributes are not stored in the feature store)"
+        )
+
+    start = get_param(params, "feast.simulated_start")
+    try:
+        date.fromisoformat(str(start))
+    except ValueError:
+        errors.append(f"feast.simulated_start must be an ISO date (YYYY-MM-DD), got {start!r}")
+    for key, minimum in (("feast.simulated_days", 1), ("feast.parity_sample", 1)):
+        value = get_param(params, key)
+        if not (isinstance(value, int) and not isinstance(value, bool) and value >= minimum):
+            errors.append(f"{key} must be an integer >= {minimum}")
+    lag = get_param(params, "feast.label_lag_days")
+    ttl = get_param(params, "feast.ttl_days")
+    if not (isinstance(lag, int) and not isinstance(lag, bool) and lag >= 0):
+        errors.append("feast.label_lag_days must be an integer >= 0")
+    if not (isinstance(ttl, int) and not isinstance(ttl, bool) and ttl >= 1):
+        errors.append("feast.ttl_days must be an integer >= 1")
+    elif isinstance(lag, int) and ttl < lag:
+        errors.append("feast.ttl_days must be >= feast.label_lag_days")
+    nulls = get_param(params, "feast.max_null_fraction")
+    if not (_is_number(nulls) and 0 <= nulls <= 1):
+        errors.append("feast.max_null_fraction must be a number in [0, 1]")
+    if not str(get_param(params, "feast.entity_join_key")).strip():
+        errors.append("feast.entity_join_key must not be empty")
+
+
+FAIRNESS_ATTRIBUTES = ("SEX", "AGE_BAND", "MARRIAGE", "EDUCATION")
+SCENARIO_OPS = ("multiply", "add")
+
+
+def _positive_int(value: Any, minimum: int = 1) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= minimum
+
+
+def _validate_cycle5_sections(params: dict[str, Any], errors: list[str]) -> None:
+    """Checks for the fairness, explanation and drift-simulation settings added in Cycle 5."""
+    attributes = get_param(params, "fairness.attributes")
+    if not (
+        isinstance(attributes, list) and attributes and set(attributes) <= set(FAIRNESS_ATTRIBUTES)
+    ):
+        errors.append(
+            f"fairness.attributes must be a non-empty list drawn from {FAIRNESS_ATTRIBUTES}"
+        )
+    edges = get_param(params, "fairness.age_band_edges")
+    if not (
+        isinstance(edges, list)
+        and edges
+        and all(_is_number(e) for e in edges)
+        and edges == sorted(set(edges))
+    ):
+        errors.append("fairness.age_band_edges must be a strictly increasing list of numbers")
+    if not _positive_int(get_param(params, "fairness.min_group_size")):
+        errors.append("fairness.min_group_size must be an integer >= 1")
+    ratio = get_param(params, "fairness.min_disparate_impact")
+    if not (_is_number(ratio) and 0 < ratio <= 1):
+        errors.append("fairness.min_disparate_impact must be a number in (0, 1]")
+    for key in ("fairness.max_tpr_gap", "fairness.max_auc_gap", "fairness.ablation_min_auc_gain"):
+        value = get_param(params, key)
+        if not (_is_number(value) and 0 <= value <= 1):
+            errors.append(f"{key} must be a number in [0, 1]")
+    for key in ("fairness.enforce", "fairness.run_ablation"):
+        if not isinstance(get_param(params, key), bool):
+            errors.append(f"{key} must be true or false")
+
+    for key in ("explain.background_size", "explain.importance_sample", "explain.top_k"):
+        if not _positive_int(get_param(params, key)):
+            errors.append(f"{key} must be an integer >= 1")
+
+    for key in ("simulate.batch_size", "simulate.psi_bins"):
+        if not _positive_int(get_param(params, key), 2 if key.endswith("bins") else 1):
+            errors.append(f"{key} must be an integer >= {2 if key.endswith('bins') else 1}")
+    threshold = get_param(params, "simulate.psi_threshold")
+    if not (_is_number(threshold) and threshold > 0):
+        errors.append("simulate.psi_threshold must be a positive number")
+    share = get_param(params, "simulate.drift_share_alert")
+    if not (_is_number(share) and 0 < share <= 1):
+        errors.append("simulate.drift_share_alert must be a number in (0, 1]")
+    scenarios = get_param(params, "simulate.scenarios")
+    if not (isinstance(scenarios, list) and scenarios):
+        errors.append("simulate.scenarios must be a non-empty list")
+        return
+    names = [s.get("name") if isinstance(s, dict) else None for s in scenarios]
+    if any(not n for n in names) or len(set(names)) != len(names):
+        errors.append("simulate.scenarios need unique, non-empty names")
+    for scenario in scenarios:
+        if not isinstance(scenario, dict) or not isinstance(scenario.get("expect_alert"), bool):
+            errors.append("every simulate scenario needs a boolean expect_alert")
+            continue
+        for change in scenario.get("changes") or []:
+            if not (
+                isinstance(change, dict)
+                and change.get("op") in SCENARIO_OPS
+                and _is_number(change.get("value"))
+                and isinstance(change.get("columns"), list)
+                and change["columns"]
+            ):
+                errors.append(
+                    f"scenario {scenario.get('name')!r}: each change needs columns, "
+                    f"op ({SCENARIO_OPS}) and a number"
+                )
 
 
 def load_params(path: str | Path | None = None) -> dict[str, Any]:

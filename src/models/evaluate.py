@@ -34,6 +34,7 @@ from src.common.errors import GateFailedError, IngestionError, PipelineError
 from src.common.io import read_json, write_json
 from src.common.logging_utils import get_logger
 from src.data.paths import evaluation_path, last_run_path, metrics_path, model_path, split_path
+from src.features.feast_features import attach_feast_features
 from src.features.preprocessing import model_input_columns
 from src.models.tracking import tracking_uri
 
@@ -91,6 +92,17 @@ def check_gate(metrics: dict[str, float], params: dict[str, Any]) -> dict[str, A
         "threshold": threshold,
         "passed": value >= threshold,
     }
+
+
+REGRESSION_METRICS = ("roc_auc", "pr_auc", "ks")
+
+
+def check_regression(
+    candidate: dict[str, float], baseline: dict[str, float], max_drop: float
+) -> list[str]:
+    """Names of the ranking metrics where `candidate` is worse than `baseline` by more than
+    `max_drop` (an empty list means no regression)."""
+    return [m for m in REGRESSION_METRICS if baseline[m] - candidate[m] > max_drop + 1e-12]
 
 
 def save_plots(
@@ -173,7 +185,7 @@ def run(params: dict[str, Any], smoke: bool = False) -> dict[str, Any]:
             raise IngestionError(f"{needed} not found (run the earlier stages first)")
 
     model = joblib.load(model_file)  # trusted, locally produced artifact only
-    test = pd.read_parquet(test_file)
+    test = attach_feast_features({"test": pd.read_parquet(test_file)}, params, smoke)["test"]
     prob = model.predict_proba(test[model_input_columns(params)])[:, 1]
     threshold = params["evaluate"]["decision_threshold"]
     metrics = compute_metrics(test[params["data"]["target_column"]], prob, threshold)

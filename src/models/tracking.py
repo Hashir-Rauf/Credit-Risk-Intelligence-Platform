@@ -3,6 +3,7 @@ version, git commit, metrics, duration and artifacts)."""
 
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -16,7 +17,7 @@ from src.common.config import repo_root, resolve_path
 from src.common.io import read_json, sha256_file
 from src.data.paths import provenance_path, raw_csv_path
 
-FEAST_PLACEHOLDER = "n/a (Feast lands in Cycle 4)"
+FEAST_PATHS = ("feature_repo", "src/features/feast_features.py")
 
 
 def tracking_uri(params: dict[str, Any], smoke: bool = False) -> str:
@@ -49,6 +50,11 @@ def experiment_name(params: dict[str, Any], smoke: bool = False) -> str:
     return f"{name}-smoke" if smoke else name
 
 
+def registry_model_name(params: dict[str, Any], smoke: bool = False) -> str:
+    name = params["mlflow"]["registry_model_name"]
+    return f"{name}-smoke" if smoke else name
+
+
 def _git(*args: str) -> str | None:
     command = ["git", *args]  # fixed arguments from this module, no user input
     try:
@@ -66,6 +72,31 @@ def git_info() -> dict[str, str]:
     status = _git("status", "--porcelain")
     dirty = "unknown" if status is None else str(bool(status)).lower()
     return {"git_commit_sha": sha, "git_dirty": dirty}
+
+
+def feast_repo_commit() -> str:
+    """Version of the feature definitions: $FEAST_REPO_COMMIT, else the last git commit that
+    touched them (+dirty if edited since), else a hash of the files (containers without .git)."""
+    configured = os.environ.get("FEAST_REPO_COMMIT", "").strip()
+    if configured:
+        return configured
+    sha = _git("log", "-1", "--format=%H", "--", *FEAST_PATHS)
+    if sha:
+        dirty = _git("status", "--porcelain", "--", *FEAST_PATHS)
+        return f"{sha}+dirty" if dirty else sha
+    digest = hashlib.sha256()
+    root = repo_root()
+    files = sorted(
+        p
+        for name in FEAST_PATHS
+        for p in ([root / name] if (root / name).is_file() else (root / name).rglob("*"))
+        if p.is_file() and "__pycache__" not in p.parts
+    )
+    for path in files:
+        digest.update(
+            path.relative_to(root).as_posix().encode() + path.read_bytes().replace(b"\r\n", b"\n")
+        )
+    return f"sha256:{digest.hexdigest()[:16]}"
 
 
 def dvc_data_hash(
@@ -105,7 +136,8 @@ def run_tags(params: dict[str, Any], smoke: bool, algorithm: str) -> dict[str, s
         **git_info(),
         "dvc_data_hash": dvc_data_hash(params, smoke),
         **data_provenance(params, smoke),
-        "feast_repo_commit": FEAST_PLACEHOLDER,
+        "feast_repo_commit": feast_repo_commit(),
+        "features_from_feast": str(params["features"]["use_feast_for_training"]).lower(),
         "algorithm": algorithm,
         "seed": str(params["seed"]),
         "smoke": str(smoke).lower(),

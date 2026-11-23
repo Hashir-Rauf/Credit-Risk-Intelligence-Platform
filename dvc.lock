@@ -5,8 +5,8 @@ stages:
     deps:
     - path: src/data/ingestion.py
       hash: md5
-      md5: 7640d17c4dc5e294bfd455167421b584
-      size: 3677
+      md5: 7ce65196c5585c19ded1e817dea343ca
+      size: 3575
     params:
       params.yaml:
         data.drop_duplicate_rows: false
@@ -31,8 +31,8 @@ stages:
       size: 2867198
     - path: src/data/validation.py
       hash: md5
-      md5: c2a8c35ed998515746f656f0cb2859da
-      size: 4765
+      md5: cfc580b7d202f739215450bdf899cd2d
+      size: 4637
     params:
       params.yaml:
         data.raw_path: data/raw/credit_default.csv
@@ -55,13 +55,13 @@ stages:
       size: 110
     - path: src/common
       hash: md5
-      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
-      size: 39992
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
       nfiles: 14
     - path: src/data/paths.py
       hash: md5
-      md5: 6e1bcc6b4288b53aceb9f117232f1664
-      size: 2957
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
     - path: src/data/schema.py
       hash: md5
       md5: a1434eb7e2120a152b45302d7a69d539
@@ -85,6 +85,7 @@ stages:
           - AGE
           exclude_sensitive_from_model: true
           schema_path: reports/feature_schema.json
+          use_feast_for_training: true
         seed: 42
         split:
           train: 0.7
@@ -145,8 +146,13 @@ stages:
     deps:
     - path: configs/model_params.yaml
       hash: md5
-      md5: d050acc5359b0613ac6c1e28342573a0
-      size: 526
+      md5: 608921d1ae1c1e90600b6779c04745dc
+      size: 1471
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
     - path: data/processed/test.parquet
       hash: md5
       md5: 0c3372b59b8f7a628ab162f59808167e
@@ -163,39 +169,52 @@ stages:
       hash: md5
       md5: 40c303e5c0c02b9b9257f7ab66a20619
       size: 2569
+    - path: reports/model_comparison.md
+      hash: md5
+      md5: 1f3032a379e4ad118f4646c92f566ec6
+      size: 761
+    - path: reports/tuning.json
+      hash: md5
+      md5: e2932972f5641456344ed7a214a6f25e
+      size: 17313
     - path: src/common
       hash: md5
-      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
-      size: 39992
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
       nfiles: 14
     - path: src/data/paths.py
       hash: md5
-      md5: 6e1bcc6b4288b53aceb9f117232f1664
-      size: 2957
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
     - path: src/data/schema.py
       hash: md5
       md5: a1434eb7e2120a152b45302d7a69d539
       size: 817
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
     - path: src/features/preprocessing.py
       hash: md5
       md5: df7d72b8c17270d087e51e3663d6a56b
       size: 9598
     - path: src/models/evaluate.py
       hash: md5
-      md5: 370e9c9f04ae1530f952a79b4c402185
-      size: 8282
+      md5: 86d6bf14594ab11a3c1d1bea29104e61
+      size: 8807
     - path: src/models/tracking.py
       hash: md5
-      md5: 9d71a9bda3f034fdf7c51179ee33ee0b
-      size: 4647
+      md5: 8b21a571b13c41c7a5304c5aaa92fed6
+      size: 5937
     - path: src/models/train.py
       hash: md5
-      md5: 5bd8837d9b26943b24076eda5fc29516
-      size: 7829
+      md5: 78c4712787e19859be461f0b8799033f
+      size: 9310
     params:
       params.yaml:
         data.target_column: default
         evaluate.decision_threshold: 0.5
+        feast.label_lag_days: 30
         features:
           sensitive_columns:
           - SEX
@@ -203,59 +222,69 @@ stages:
           - AGE
           exclude_sensitive_from_model: true
           schema_path: reports/feature_schema.json
+          use_feast_for_training: true
         mlflow.experiment_name: credit-risk-default
         seed: 42
-        train.algorithm: logistic_regression
+        train.algorithm: tuned
     outs:
     - path: models/model.joblib
       hash: md5
-      md5: d105fc926fd07f01a20a2cfa8d5781b4
-      size: 2979
+      md5: 82faaa92512650404932a318964b8721
+      size: 3563695
     - path: reports/metrics.json
       hash: md5
-      md5: da94df98829f31b090ce517e913f8464
-      size: 1115
+      md5: 150628177b0329927ee442181967808c
+      size: 1311
     - path: reports/plots
       hash: md5
-      md5: 9dbf230b7c825b24979ce348c5a19c94.dir
-      size: 85452
+      md5: 279824a2a1e121a39474027ceb56002a.dir
+      size: 85861
       nfiles: 4
   evaluate:
     cmd: python -m src.models.evaluate
     deps:
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
     - path: data/processed/test.parquet
       hash: md5
       md5: 0c3372b59b8f7a628ab162f59808167e
       size: 540512
     - path: models/model.joblib
       hash: md5
-      md5: d105fc926fd07f01a20a2cfa8d5781b4
-      size: 2979
+      md5: 82faaa92512650404932a318964b8721
+      size: 3563695
     - path: reports/metrics.json
       hash: md5
-      md5: da94df98829f31b090ce517e913f8464
-      size: 1115
+      md5: 150628177b0329927ee442181967808c
+      size: 1311
     - path: src/common
       hash: md5
-      md5: 73b99ef5b43cfa1dd8f038ea2f8983bd.dir
-      size: 39992
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
       nfiles: 14
     - path: src/data/paths.py
       hash: md5
-      md5: 6e1bcc6b4288b53aceb9f117232f1664
-      size: 2957
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
     - path: src/features/preprocessing.py
       hash: md5
       md5: df7d72b8c17270d087e51e3663d6a56b
       size: 9598
     - path: src/models/evaluate.py
       hash: md5
-      md5: 370e9c9f04ae1530f952a79b4c402185
-      size: 8282
+      md5: 86d6bf14594ab11a3c1d1bea29104e61
+      size: 8807
     - path: src/models/tracking.py
       hash: md5
-      md5: 9d71a9bda3f034fdf7c51179ee33ee0b
-      size: 4647
+      md5: 8b21a571b13c41c7a5304c5aaa92fed6
+      size: 5937
     params:
       params.yaml:
         data.target_column: default
@@ -263,11 +292,539 @@ stages:
           decision_threshold: 0.5
           evaluation_path: reports/evaluation.json
           repro_tolerance: 1e-09
+        feast:
+          project: credit_risk
+          repo_dir: feature_repo
+          data_dir: data/feast
+          entity_join_key: customer_id
+          simulated_start: '2026-01-01'
+          simulated_days: 180
+          label_lag_days: 30
+          ttl_days: 3650
+          max_null_fraction: 0.0
+          parity_sample: 200
+          report_path: reports/feast_report.json
         features.exclude_sensitive_from_model: true
+        features.use_feast_for_training: true
         gate:
-          roc_auc_min: 0.75
+          roc_auc_min: 0.77
     outs:
     - path: reports/evaluation.json
       hash: md5
-      md5: e082cabb6328fc9d71ec8f5c92a3ef42
-      size: 591
+      md5: 81357e07846153ab76cff7d7a9337097
+      size: 590
+  feast:
+    cmd: python -m src.features.feast_features
+    deps:
+    - path: data/raw/credit_default.csv
+      hash: md5
+      md5: a7e80c905840715d8456fe06d935f981
+      size: 2867198
+    - path: feature_repo
+      hash: md5
+      md5: 9712656e407af63ed913ebd9f260e620.dir
+      size: 3481
+      nfiles: 5
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 3b50c4ea7c115784c6fbd7177c3d3669
+      size: 110
+    - path: src/common
+      hash: md5
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/data/schema.py
+      hash: md5
+      md5: a1434eb7e2120a152b45302d7a69d539
+      size: 817
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    params:
+      params.yaml:
+        data.id_column: customer_id
+        data.raw_path: data/raw/credit_default.csv
+        data.target_column: default
+        data.validation_report: reports/data_validation.json
+        feast:
+          project: credit_risk
+          repo_dir: feature_repo
+          data_dir: data/feast
+          entity_join_key: customer_id
+          simulated_start: '2026-01-01'
+          simulated_days: 180
+          label_lag_days: 30
+          ttl_days: 3650
+          max_null_fraction: 0.0
+          parity_sample: 200
+          report_path: reports/feast_report.json
+        seed: 42
+    outs:
+    - path: data/feast/online_store.db
+      hash: md5
+      md5: cc2dfb2c500104e1b628ec4ea73eff22
+      size: 116064256
+    - path: data/feast/registry.db
+      hash: md5
+      md5: 7d4b61324335046af0132099a6c1137f
+      size: 4145
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
+    - path: reports/feast_report.json
+      hash: md5
+      md5: 40778f7a1e226de991852bbf148110ad
+      size: 2317
+  tune:
+    cmd: python -m src.models.tune
+    deps:
+    - path: configs/model_params.yaml
+      hash: md5
+      md5: 608921d1ae1c1e90600b6779c04745dc
+      size: 1471
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 91a789c7b259977261c4b694cc2c6c78
+      size: 539217
+    - path: src/common
+      hash: md5
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/tracking.py
+      hash: md5
+      md5: 8b21a571b13c41c7a5304c5aaa92fed6
+      size: 5937
+    - path: src/models/train.py
+      hash: md5
+      md5: 78c4712787e19859be461f0b8799033f
+      size: 9310
+    - path: src/models/tune.py
+      hash: md5
+      md5: db238d886e7f1550a2bb08a0609b673e
+      size: 11694
+    params:
+      params.yaml:
+        data.target_column: default
+        feast.label_lag_days: 30
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+          use_feast_for_training: true
+        mlflow.experiment_name: credit-risk-default
+        seed: 42
+        tune:
+          families:
+          - logistic_regression
+          - random_forest
+          - hist_gradient_boosting
+          n_trials: 20
+          smoke_n_trials: 3
+          cv_folds: 3
+          simplicity_margin: 0.002
+          results_path: reports/tuning.json
+          comparison_path: reports/model_comparison.md
+    outs:
+    - path: reports/model_comparison.md
+      hash: md5
+      md5: 1f3032a379e4ad118f4646c92f566ec6
+      size: 761
+    - path: reports/tuning.json
+      hash: md5
+      md5: e2932972f5641456344ed7a214a6f25e
+      size: 17313
+  fairness:
+    cmd: python -m src.models.fairness
+    deps:
+    - path: configs/model_params.yaml
+      hash: md5
+      md5: 608921d1ae1c1e90600b6779c04745dc
+      size: 1471
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: models/model.joblib
+      hash: md5
+      md5: 82faaa92512650404932a318964b8721
+      size: 3563695
+    - path: reports/metrics.json
+      hash: md5
+      md5: 150628177b0329927ee442181967808c
+      size: 1311
+    - path: reports/tuning.json
+      hash: md5
+      md5: e2932972f5641456344ed7a214a6f25e
+      size: 17313
+    - path: src/common
+      hash: md5
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/fairness.py
+      hash: md5
+      md5: eb2a3644018e3bf3f778f9dc94fdb24b
+      size: 12599
+    - path: src/models/train.py
+      hash: md5
+      md5: 78c4712787e19859be461f0b8799033f
+      size: 9310
+    params:
+      params.yaml:
+        data.target_column: default
+        evaluate.decision_threshold: 0.5
+        fairness:
+          attributes:
+          - SEX
+          - AGE_BAND
+          - MARRIAGE
+          age_band_edges:
+          - 30
+          - 40
+          - 50
+          - 60
+          min_group_size: 50
+          min_disparate_impact: 0.8
+          max_tpr_gap: 0.1
+          max_auc_gap: 0.05
+          enforce: false
+          run_ablation: true
+          ablation_min_auc_gain: 0.005
+          report_path: reports/fairness.json
+        feast.label_lag_days: 30
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+          use_feast_for_training: true
+        seed: 42
+        train.algorithm: tuned
+    outs:
+    - path: reports/fairness.json
+      hash: md5
+      md5: 7b69a830ba31989a51a908ce4bf1368b
+      size: 7977
+  explain:
+    cmd: python -m src.models.explain
+    deps:
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: models/model.joblib
+      hash: md5
+      md5: 82faaa92512650404932a318964b8721
+      size: 3563695
+    - path: reports/metrics.json
+      hash: md5
+      md5: 150628177b0329927ee442181967808c
+      size: 1311
+    - path: src/common
+      hash: md5
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/explain.py
+      hash: md5
+      md5: 6fd367b98c3ef53f125b466abebc7c0b
+      size: 11797
+    - path: src/models/inference.py
+      hash: md5
+      md5: 7056ab881b02d0e9de7acecf92140e3b
+      size: 3249
+    params:
+      params.yaml:
+        data.target_column: default
+        explain:
+          background_size: 50
+          importance_sample: 100
+          top_k: 5
+          report_path: reports/explanations.json
+          background_path: models/explainer_background.parquet
+        feast.label_lag_days: 30
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+          use_feast_for_training: true
+        seed: 42
+    outs:
+    - path: models/explainer_background.parquet
+      hash: md5
+      md5: f98150a3af765cf3b2046744e547f2bd
+      size: 26846
+    - path: reports/explanations.json
+      hash: md5
+      md5: b133909f5550548dea8e81f22c1eef53
+      size: 6220
+    - path: reports/explanations.png
+      hash: md5
+      md5: 7b1522cf9b34b6ad2c288c8d94c68b70
+      size: 36937
+  drift:
+    cmd: python -m src.models.drift
+    deps:
+    - path: data/feast/source
+      hash: md5
+      md5: 5cfa8aecaa7fbba62e9bba19da54d9cb.dir
+      size: 2953347
+      nfiles: 3
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 0c3372b59b8f7a628ab162f59808167e
+      size: 540512
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 0e3bc9b0ef58c4073deee0e31f6de5b7
+      size: 2390795
+    - path: models/model.joblib
+      hash: md5
+      md5: 82faaa92512650404932a318964b8721
+      size: 3563695
+    - path: reports/metrics.json
+      hash: md5
+      md5: 150628177b0329927ee442181967808c
+      size: 1311
+    - path: src/common
+      hash: md5
+      md5: 48d7019f7af9ae009aa02faffdcac2f9.dir
+      size: 66953
+      nfiles: 14
+    - path: src/data/paths.py
+      hash: md5
+      md5: 7d025e05edbc0ebd1b554d75c39305e5
+      size: 5801
+    - path: src/features/feast_features.py
+      hash: md5
+      md5: 1a87710e818fcf12d6174c60ce5150ad
+      size: 18003
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: df7d72b8c17270d087e51e3663d6a56b
+      size: 9598
+    - path: src/models/drift.py
+      hash: md5
+      md5: dfac7e5fdc69955e3d5012a7feb0c36f
+      size: 11124
+    params:
+      params.yaml:
+        data.target_column: default
+        feast.label_lag_days: 30
+        features:
+          sensitive_columns:
+          - SEX
+          - MARRIAGE
+          - AGE
+          exclude_sensitive_from_model: true
+          schema_path: reports/feature_schema.json
+          use_feast_for_training: true
+        seed: 42
+        simulate:
+          batch_size: 1000
+          reference_path: data/reference/reference.parquet
+          batches_dir: data/simulated
+          report_path: reports/drift_scenarios.json
+          psi_bins: 10
+          psi_threshold: 0.2
+          drift_share_alert: 0.3
+          scenarios:
+          - name: no_drift
+            description: Control batch drawn from the same distribution; must 
+              NOT alert.
+            expect_alert: false
+            changes: []
+          - name: limit_bal_inflation
+            description: Credit limits inflated by 60 percent (e.g. a new, 
+              wealthier customer segment).
+            expect_alert: false
+            changes:
+            - columns:
+              - LIMIT_BAL
+              op: multiply
+              value: 1.6
+          - name: payment_delays
+            description: Payment status slips by two months and actual payments 
+              halve (economic shock).
+            expect_alert: true
+            changes:
+            - columns:
+              - PAY_1
+              - PAY_2
+              - PAY_3
+              - PAY_4
+              - PAY_5
+              - PAY_6
+              op: add
+              value: 2
+            - columns:
+              - PAY_AMT1
+              - PAY_AMT2
+              - PAY_AMT3
+              - PAY_AMT4
+              - PAY_AMT5
+              - PAY_AMT6
+              op: multiply
+              value: 0.5
+          - name: spending_surge
+            description: Bills and payments grow 2.5x while credit limits are 
+              halved (inflation plus tightening).
+            expect_alert: true
+            changes:
+            - columns:
+              - BILL_AMT1
+              - BILL_AMT2
+              - BILL_AMT3
+              - BILL_AMT4
+              - BILL_AMT5
+              - BILL_AMT6
+              op: multiply
+              value: 2.5
+            - columns:
+              - PAY_AMT1
+              - PAY_AMT2
+              - PAY_AMT3
+              - PAY_AMT4
+              - PAY_AMT5
+              - PAY_AMT6
+              op: multiply
+              value: 2.5
+            - columns:
+              - LIMIT_BAL
+              op: multiply
+              value: 0.5
+        validation.domains:
+          SEX:
+          - 1
+          - 2
+          EDUCATION:
+          - 0
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 6
+          MARRIAGE:
+          - 0
+          - 1
+          - 2
+          - 3
+        validation.ranges:
+          LIMIT_BAL:
+          - 1
+          - 5000000
+          AGE:
+          - 18
+          - 100
+          PAY:
+          - -2
+          - 9
+          BILL_AMT:
+          - -1000000
+          - 5000000
+          PAY_AMT:
+          - 0
+          - 10000000
+    outs:
+    - path: data/reference/reference.parquet
+      hash: md5
+      md5: b3a9da17293d6ae024a92f2d827d3a0b
+      size: 1315818
+    - path: data/simulated
+      hash: md5
+      md5: 2cd3017fa04bdecc431b6f395eeecd93.dir
+      size: 314367
+      nfiles: 4
+    - path: reports/drift_scenarios.json
+      hash: md5
+      md5: 7e830a1423c4271c9a8141f4dcd9f76d
+      size: 20545

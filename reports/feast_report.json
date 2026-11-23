@@ -1,0 +1,104 @@
+{
+  "checks": [
+    {
+      "detail": "sensitive columns in store: []",
+      "name": "no_sensitive_features",
+      "passed": true
+    },
+    {
+      "detail": "feature views must serve exactly the model's raw inputs",
+      "name": "views_cover_model_inputs",
+      "passed": true
+    },
+    {
+      "detail": "{'payment_history': 30000, 'billing': 30000, 'account': 30000}",
+      "name": "same_rows_in_every_view",
+      "passed": true
+    },
+    {
+      "detail": "one snapshot per customer",
+      "name": "unique_customers",
+      "passed": true
+    },
+    {
+      "detail": "worst 0.0000 (max 0.0)",
+      "name": "null_fraction",
+      "passed": true
+    },
+    {
+      "detail": "2026-01-01 00:03:38+00:00 .. 2026-06-29 23:45:47+00:00",
+      "name": "timestamps_in_simulated_window",
+      "passed": true
+    },
+    {
+      "detail": "200 customers compared",
+      "name": "online_store_materialised_and_matches_source",
+      "passed": true
+    },
+    {
+      "detail": "200 customers compared",
+      "name": "offline_retrieval_matches_source",
+      "passed": true
+    },
+    {
+      "detail": "lookups before the snapshot returned no values",
+      "name": "point_in_time_no_future_leak",
+      "passed": true
+    }
+  ],
+  "entity": "customer_id",
+  "excluded_sensitive": [
+    "SEX",
+    "MARRIAGE",
+    "AGE"
+  ],
+  "feature_views": {
+    "account": {
+      "features": [
+        "LIMIT_BAL",
+        "EDUCATION"
+      ],
+      "rows": 30000
+    },
+    "billing": {
+      "features": [
+        "BILL_AMT1",
+        "BILL_AMT2",
+        "BILL_AMT3",
+        "BILL_AMT4",
+        "BILL_AMT5",
+        "BILL_AMT6",
+        "PAY_AMT1",
+        "PAY_AMT2",
+        "PAY_AMT3",
+        "PAY_AMT4",
+        "PAY_AMT5",
+        "PAY_AMT6"
+      ],
+      "rows": 30000
+    },
+    "payment_history": {
+      "features": [
+        "PAY_1",
+        "PAY_2",
+        "PAY_3",
+        "PAY_4",
+        "PAY_5",
+        "PAY_6"
+      ],
+      "rows": 30000
+    }
+  },
+  "n_customers": 30000,
+  "project": "credit_risk",
+  "smoke": false,
+  "status": "passed",
+  "timestamps": {
+    "first": "2026-01-01T00:03:38+00:00",
+    "kind": "simulated (UCI has no timestamps)",
+    "label_lag_days": 30,
+    "last": "2026-06-29T23:45:47+00:00",
+    "window_days": 180,
+    "window_start": "2026-01-01T00:00:00+00:00"
+  }
+}

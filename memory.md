@@ -2,10 +2,10 @@
 
 Living log for the team and AI agents. Keep it short and current. Newest entries at the top of each section. Facts only; no secrets.
 
-_Last updated: 2026-11-08_
+_Last updated: 2026-11-20_
 
 ## START HERE (for a new session)
-1. Read `agents.md`, `rules.md`, then this file. The roadmap is `plan.md`; step-level runbook is `phases.md` (Phase 0 is in progress).
+1. Read `agents.md`, `rules.md`, then this file. The roadmap is `plan.md`; step-level runbook is `phases.md` (Phases 0-2 done in code; Phase 3 onward is Hashir's).
 2. You are probably in a **fresh session started after the AWS Agent Toolkit install**, so the `aws-mcp` server and the 25 AWS skills should now be loaded. Check that the AWS MCP tools respond. If not, see "AWS setup" below.
 3. `CLAUDE.md` contains the AWS "new experience" rules. It says to **ask the user their help level (low / medium / high) while building**. Ask once when AWS work starts, then record the answer under "Preferences".
 4. Never add Claude/Co-Authored-By attribution to commits or PRs (see `rules.md` §11). Do not commit or push unless the user asks.
@@ -26,8 +26,8 @@ _Last updated: 2026-11-08_
 - Professor approved: Hugging Face, BentoML, Feast, Flask API, Kubeflow.
 - Still unconfirmed: AWS spend limit itself (budget alerts exist).
 
-## Phase 2 baseline merged (2026-11-15, JA-Codex work ported onto this base)
-Added `src/common/` (config, CLI + exit codes 0/1/2/3, seed, io), `src/data/{paths,schema,synthetic}.py`, `src/features/preprocessing.py`, `src/models/{train,evaluate,tracking,inference}.py`, `configs/`, `docs/contracts-s1.md`, tests (`conftest`, `test_common`, `test_features`, `test_model`), and `preprocess -> train -> evaluate` in `dvc.yaml` (needs Hashir's review). `params.yaml` gained `smoke`, `validation.domains/ranges`, `split`, `features`, `train`, `evaluate`, `gate`, `mlflow`, and `data.{id_column,target_column,processed_dir,timestamp_column}`; his keys are unchanged. Verified on synthetic data only: ruff/black clean, all tests pass incl. a real `dvc repro` on stages after ingest. **Not run on real UCI data; gate 0.75 is unvalidated.** Pending: tuning, boosted trees, registry, Feast, EDA, fairness/SHAP, model-selection doc. Open for Hashir: `src.data.validation` exits 1 on failure but the stage contract says 2.
+## Phase 2 code complete (2026-11-15, JA-Codex cycles 0-5 ported onto this base)
+Added `src/common/`, `src/data/{paths,schema,synthetic}.py`, `src/features/{preprocessing,feast_features}.py`, `src/models/{train,tune,evaluate,tracking,inference,registry,promote,fairness,explain,drift}.py`, `feature_repo/`, `configs/`, `docs/contracts-s1.md`, tests, and a 10-stage `dvc.yaml` (`ingest -> validate -> preprocess -> feast -> tune -> train -> evaluate -> fairness, explain, drift`). `params.yaml` kept his keys and gained `smoke`, `validation.domains/ranges`, `split`, `features`, `feast`, `train` (`algorithm: tuned`), `tune`, `evaluate`, `gate`, `promotion`, `fairness`, `explain`, `simulate`, `mlflow`, and `data.{id_column,target_column,processed_dir,timestamp_column}`. Real-data baseline (logistic regression, 2026-11-15): test ROC-AUC 0.7675, val 0.7633; gate 0.75 passed. Tuning, registry, Feast, fairness, explain and drift are verified on synthetic data only. Pending: real-data `dvc repro` through all 10 stages, EDA notebook, `docs/model-selection.md`, `docs/fairness.md`, gate recalibration. Open for Hashir: `src.data.validation` exits 1 on failure but the stage contract says 2; online-store packaging for serving; review of `dvc.yaml`/`params.yaml`.
 
 ## Phase 1 UPDATE (later 2026-11-08): all [H] items DONE and committed on `feat/phase-1-data-dvc` (authored Hashir Rauf <hashirpriv04@gmail.com>, no AI attribution). Data versions: v1 30,000 rows md5 a7e80c90..; v2 (`835412d`, dedupe) 29,965 rows md5 22e7b58a..; merged-conflict demo 29,620 rows. Repro demo and merge-conflict exercise run; evidence in `docs/evidence/phase-1/` (README index). Found and fixed: `.gitignore` `models/` rule was hiding `src/models/` (now `/models/`); `*.log` ignored evidence (now excepted). Open: DagsHub data-view screenshot (manual; DagsHub repo is standalone, not a GitHub mirror), PR must be opened by the user (no `gh`), JA-Codex reviews. Account ID scrubbed from memory.md (public repo) but `.dvc/config` still contains the bucket name.
 
@@ -41,6 +41,9 @@ Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS acco
 - Everything the AI does is attributed to **Hashir-Rauf** (CODEOWNERS and commits). Repo-local git identity set to `Hashir Rauf <hashirpriv04@gmail.com>`; the global git email is `jahangir.saleem.mughal@gmail.com` (looks like JA-Codex's), so earlier commits `7dcdc7a..f7b21fb` carry that email. User should confirm `hashirpriv04@gmail.com` is verified on their GitHub account.
 - JA-Codex's work (Phase 2 modelling, features, Feast, notebooks, model/fairness docs) is NOT implemented by the AI. Placeholders live in `src/features/preprocessing.py`, `src/models/{train,tune,evaluate}.py`; the flag/to-do list is `docs/HANDOFF-JA-Codex.md`. CODEOWNERS updated: `src/data`, `dvc.yaml`, `.dvc/config`, `params.yaml`, `scripts/`, `tests/test_data.py`, `tests/fixtures/` -> Hashir-Rauf; `src/features`, `src/models`, `feature_repo`, `notebooks`, other `tests/` -> JA-Codex.
 - Still the AI's (S2/S3 = Hashir): pipelines, CI, serving, docker, k8s, infra, monitoring, frontend.
+
+## Update 2026-11-20 (JA-Codex, Phase 2 wrap-up)
+Added `tune.cv_folds` (3-fold train CV AUC per family, reported only), `notebooks/eda.ipynb`, `docs/model-card.md`, contract section 8d, `requirements.lock.txt` (Linux, py3.11). Pinned `optuna==5.0.0`, `shap==0.51.0`, `scikit-learn==1.9.1`; removed unused xgboost/lightgbm. Standard Python: 3.11. Pending on JA-Codex's machine: re-run `dvc repro`, registry/promote, evidence in `docs/evidence/phase-2/`.
 
 ## Next up
 **Mine (AI):**
@@ -86,7 +89,7 @@ Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS acco
 - [x] Feast and BentoML approved (confirmed 2026-11-08).
 - [x] Flask API approved (confirmed 2026-11-08).
 - [x] Kubeflow approved (confirmed 2026-11-08); local kind setup still assumed.
-- [ ] Initial quality gate ROC-AUC ≥ 0.75 is reasonable; revisit after the baseline.
+- [x] Quality gate recalibrated to ROC-AUC >= 0.77 (above the LR baseline 0.7675).
 
 ## AWS findings (2026-11-08)
 - Account ID <account-id> (role `AccountFullAccessRole`), no S3 buckets yet.
@@ -119,7 +122,8 @@ Note: committed `.dvc/config` contains the S3 bucket name (includes the AWS acco
 ## Metrics baseline (fill after first runs)
 | Model | ROC-AUC | PR-AUC | Notes |
 |---|---|---|---|
-| Logistic Regression | _TBD_ | _TBD_ | baseline |
+| Logistic Regression | 0.7675 | _TBD_ | baseline, test split, 2026-11-15 |
+| Random forest (tuned) | 0.7883 | 0.578 | selected; threshold 0.5; KS 0.440; gate 0.77 |
 
 ## Lessons learned / gotchas
 - Tool calls (shell, file writes) occasionally fail with a transient "classifier no verdict" error; retry later or continue other work.

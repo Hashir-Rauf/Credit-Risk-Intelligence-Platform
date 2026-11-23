@@ -1,4 +1,4 @@
-# ingest -> validate (Phase 1) -> preprocess -> train -> evaluate (Phase 2).
+# ingest -> validate (Phase 1) -> preprocess -> feast -> tune -> train -> evaluate -> fairness, explain, drift (Phase 2).
 # `evaluate` exits 3 when the quality gate fails, which stops `dvc repro`.
 # Every stage is `python -m <module> [--params FILE] [--smoke]`; see docs/contracts-s1.md.
 stages:
@@ -56,6 +56,59 @@ stages:
       - reports/feature_schema.json:
           cache: false
 
+  feast:
+    cmd: python -m src.features.feast_features
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/data/schema.py
+      - src/features/preprocessing.py
+      - src/features/feast_features.py
+      - feature_repo
+      - data/raw/credit_default.csv
+      - reports/data_validation.json
+    params:
+      - seed
+      - data.raw_path
+      - data.validation_report
+      - data.id_column
+      - data.target_column
+      - feast
+    outs:
+      - data/feast/source
+      - data/feast/registry.db
+      - data/feast/online_store.db
+      - reports/feast_report.json:
+          cache: false
+
+  tune:
+    cmd: python -m src.models.tune
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/features/preprocessing.py
+      - src/features/feast_features.py
+      - src/models/tracking.py
+      - src/models/train.py
+      - src/models/tune.py
+      - configs/model_params.yaml
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+      - data/feast/source
+    params:
+      - seed
+      - data.target_column
+      - features
+      - feast.label_lag_days
+      - tune
+      - mlflow.experiment_name
+    outs:
+      - reports/tuning.json:
+          cache: false
+      - reports/model_comparison.md:
+          cache: false
+
   train:
     cmd: python -m src.models.train
     deps:
@@ -63,6 +116,7 @@ stages:
       - src/data/paths.py
       - src/data/schema.py
       - src/features/preprocessing.py
+      - src/features/feast_features.py
       - src/models/evaluate.py
       - src/models/tracking.py
       - src/models/train.py
@@ -71,10 +125,14 @@ stages:
       - data/processed/val.parquet
       - data/processed/test.parquet
       - reports/feature_schema.json
+      - data/feast/source
+      - reports/tuning.json
+      - reports/model_comparison.md
     params:
       - seed
       - data.target_column
       - features
+      - feast.label_lag_days
       - train.algorithm
       - evaluate.decision_threshold
       - mlflow.experiment_name
@@ -91,16 +149,101 @@ stages:
       - src/common
       - src/data/paths.py
       - src/features/preprocessing.py
+      - src/features/feast_features.py
       - src/models/evaluate.py
       - src/models/tracking.py
       - models/model.joblib
       - data/processed/test.parquet
+      - data/feast/source
       - reports/metrics.json
     params:
       - data.target_column
       - features.exclude_sensitive_from_model
+      - features.use_feast_for_training
+      - feast
       - evaluate
       - gate
     outs:
       - reports/evaluation.json:
+          cache: false
+
+  fairness:
+    cmd: python -m src.models.fairness
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/features/preprocessing.py
+      - src/features/feast_features.py
+      - src/models/fairness.py
+      - src/models/train.py
+      - configs/model_params.yaml
+      - models/model.joblib
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+      - data/feast/source
+      - reports/metrics.json
+      - reports/tuning.json
+    params:
+      - seed
+      - data.target_column
+      - features
+      - feast.label_lag_days
+      - train.algorithm
+      - evaluate.decision_threshold
+      - fairness
+    outs:
+      - reports/fairness.json:
+          cache: false
+
+  explain:
+    cmd: python -m src.models.explain
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/features/preprocessing.py
+      - src/features/feast_features.py
+      - src/models/explain.py
+      - src/models/inference.py
+      - models/model.joblib
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+      - data/feast/source
+      - reports/metrics.json
+    params:
+      - seed
+      - data.target_column
+      - features
+      - feast.label_lag_days
+      - explain
+    outs:
+      - models/explainer_background.parquet
+      - reports/explanations.json:
+          cache: false
+      - reports/explanations.png
+
+  drift:
+    cmd: python -m src.models.drift
+    deps:
+      - src/common
+      - src/data/paths.py
+      - src/features/preprocessing.py
+      - src/features/feast_features.py
+      - src/models/drift.py
+      - models/model.joblib
+      - data/processed/train.parquet
+      - data/processed/test.parquet
+      - data/feast/source
+      - reports/metrics.json
+    params:
+      - seed
+      - data.target_column
+      - features
+      - feast.label_lag_days
+      - validation.ranges
+      - validation.domains
+      - simulate
+    outs:
+      - data/reference/reference.parquet
+      - data/simulated
+      - reports/drift_scenarios.json:
           cache: false

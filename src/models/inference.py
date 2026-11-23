@@ -65,3 +65,24 @@ def predict(
         {"probability": float(p), "prediction": int(p >= threshold)}
         for p in predict_proba(model, records, columns)
     ]
+
+
+def predict_for_customers(
+    model: Any,
+    params: dict[str, Any],
+    customer_ids: Sequence[int],
+    threshold: float,
+    smoke: bool = False,
+    store: Any = None,
+) -> list[dict[str, Any]]:
+    """Score known customers by id: features come from the Feast online store, then the same
+    model path as `predict`. Raises FeatureNotFoundError (serving: HTTP 404) for unknown ids."""
+    from src.features.feast_features import get_online_features
+
+    key = params["feast"]["entity_join_key"]
+    frame = get_online_features(params, list(customer_ids), smoke, store)
+    probabilities = model.predict_proba(frame[RAW_INPUT_COLUMNS].astype("float64"))[:, 1]
+    return [
+        {key: int(i), "probability": float(p), "prediction": int(p >= threshold)}
+        for i, p in zip(frame[key], probabilities, strict=True)
+    ]
