@@ -1,0 +1,45 @@
+python: Python 3.13.5 | sklearn 1.9.1 | pandas 2.3.3
+committed metrics (git): test ROC-AUC 0.7883450182006565
+
+=== dvc repro -s -f preprocess  (17:52:58)
+Running stage 'preprocess':
+> python -m src.features.preprocessing
+2026-11-23 22:53:02,011 INFO __main__: split sizes: {'train': 21000, 'val': 4500, 'test': 4500}
+2026-11-23 22:53:02,013 INFO __main__: stage finished; outputs: {'splits': {'train': 21000, 'val': 4500, 'test': 4500}, 'feature_schema': 'C:\\Users\\Hashir Rauf\\AppData\\Local\\Temp\\claude\\6c3bf33d58ea26a0\\d3ed3b27-488a-4c24-a503-1bc3eaeead37\\scratchpad\\rep\\reports\\feature_schema.json'}
+
+=== dvc repro -s -f feast  (17:53:02)
+Materializing [1m[32m3[0m feature views from [1m[32m2025-12-31 00:00:00+00:00[0m to [1m[32m2026-07-01 00:00:00+00:00[0m into the [1m[32msqlite[0m online store.
+[1m[32mpayment_history[0m:
+[1m[32mbilling[0m:
+[1m[32maccount[0m:
+Updating lock file 'dvc.lock'
+To enable auto staging, run:
+
+=== dvc repro -s -f tune  (17:53:26)
+E:\Education\FAST-NUCES\Semester 7\MLops\Project\.venv\Lib\site-packages\mlflow\store\tracking\sqlalchemy_store.py:356: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+  sqlalchemy.orm.configure_mappers()
+2026/11/23 22:55:45 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2026/11/23 22:55:45 INFO mlflow.store.db.utils: Updating database tables
+2026-11-23 22:55:48,244 INFO __main__: selected random_forest (random_forest is within 0.002 validation ROC-AUC of hist_gradient_boosting (0.7922 vs 0.7925) and is the simpler model); MLflow tuning run 93fa2713913344f2a4a34b26b48f2d7c
+2026-11-23 22:55:48,244 INFO __main__: stage finished; outputs: {'selected': 'random_forest', 'val_roc_auc': 0.7922}
+
+=== dvc repro -s -f train  (17:55:49)
+  sqlalchemy.orm.configure_mappers()
+Downloading artifacts:   0%|          | 0/40 [00:00<?, ?it/s]Downloading artifacts:   2%|2         | 1/40 [00:00<00:00, 8612.53it/s]Downloading artifacts:   5%|5         | 2/40 [00:00<00:00, 8413.85it/s]Downloading artifacts:   8%|7         | 3/40 [00:00<00:00, 9058.97it/s]Downloading artifacts:  10%|#         | 4/40 [00:00<00:00, 9341.43it/s]Downloading artifacts:  12%|#2        | 5/40 [00:00<00:00, 8341.89it/s]Downloading artifacts:  15%|#5        | 6/40 [00:00<00:00, 8927.22it/s]Downloading artifacts:  18%|#7        | 7/40 [00:00<00:00, 9604.23it/s]Downloading artifacts:  20%|##        | 8/40 [00:00<00:00, 10251.89it/s]Downloading artifacts:  22%|##2       | 9/40 [00:00<00:00, 10837.99it/s]Downloading artifacts:  25%|##5       | 10/40 [00:00<00:00, 11253.83it/s]Downloading artifacts:  28%|##7       | 11/40 [00:00<00:00, 11414.48it/s]Downloading artifacts:  30%|###       | 12/40 [00:00<00:00, 10396.95it/s]Downloading artifacts:  32%|###2      | 13/40 [00:00<00:00, 10295.69it/s]Downloading artifacts:  35%|###5      | 14/40 [00:00<00:00, 10138.17it/s]Downloading artifacts:  38%|###7      | 15/40 [00:00<00:00, 10346.09it/s]Downloading artifacts:  40%|####      | 16/40 [00:00<00:00, 10601.72it/s]Downloading artifacts:  42%|####2     | 17/40 [00:00<00:00, 10852.84it/s]Downloading artifacts:  45%|####5     | 18/40 [00:00<00:00, 11094.41it/s]Downloading artifacts:  48%|####7     | 19/40 [00:00<00:00, 11331.12it/s]Downloading artifacts:  50%|#####     | 20/40 [00:00<00:00, 11452.02it/s]Downloading artifacts:  52%|#####2    | 21/40 [00:00<00:00, 11652.39it/s]Downloading artifacts:  55%|#####5    | 22/40 [00:00<00:00, 11886.47it/s]Downloading artifacts:  57%|#####7    | 23/40 [00:00<00:00, 12125.31it/s]Downloading artifacts:  60%|######    | 24/40 [00:00<00:00, 12358.91it/s]Downloading artifacts:  62%|######2   | 25/40 [00:00<00:00, 12583.42it/s]Downloading artifacts:  65%|######5   | 26/40 [00:00<00:00, 12802.52it/s]Downloading artifacts:  68%|######7   | 27/40 [00:00<00:00, 13004.85it/s]Downloading artifacts:  70%|#######   | 28/40 [00:00<00:00, 13204.47it/s]Downloading artifacts:  72%|#######2  | 29/40 [00:00<00:00, 13403.29it/s]Downloading artifacts:  75%|#######5  | 30/40 [00:00<00:00, 13308.21it/s]Downloading artifacts:  78%|#######7  | 31/40 [00:00<00:00, 13248.77it/s]Downloading artifacts:  80%|########  | 32/40 [00:00<00:00, 13287.57it/s]Downloading artifacts:  82%|########2 | 33/40 [00:00<00:00, 13360.23it/s]Downloading artifacts:  85%|########5 | 34/40 [00:00<00:00, 13466.13it/s]Downloading artifacts:  88%|########7 | 35/40 [00:00<00:00, 13573.80it/s]Downloading artifacts:  90%|######### | 36/40 [00:00<00:00, 13673.36it/s]Downloading artifacts:  92%|#########2| 37/40 [00:00<00:00, 13770.12it/s]Downloading artifacts:  95%|#########5| 38/40 [00:00<00:00, 13824.58it/s]Downloading artifacts:  98%|#########7| 39/40 [00:00<00:00, 13368.57it/s]Downloading artifacts: 100%|##########| 40/40 [00:00<00:00, 13403.54it/s]Downloading artifacts: 100%|##########| 40/40 [00:00<00:00, 13046.05it/s]
+2026-11-23 22:56:23,730 INFO __main__: trained random_forest: val AUC 0.7922, test AUC 0.7883 (1.2s), MLflow run 3f495cf785ee4886a4954119aff540e4
+2026-11-23 22:56:23,731 INFO __main__: stage finished; outputs: {'model': 'C:\\Users\\Hashir Rauf\\AppData\\Local\\Temp\\claude\\6c3bf33d58ea26a0\\d3ed3b27-488a-4c24-a503-1bc3eaeead37\\scratchpad\\rep\\models\\model.joblib', 'test_roc_auc': 0.7883}
+Updating lock file 'dvc.lock'
+To enable auto staging, run:
+
+=== dvc repro -s -f evaluate  (17:56:24)
+E:\Education\FAST-NUCES\Semester 7\MLops\Project\.venv\Lib\site-packages\mlflow\store\tracking\sqlalchemy_store.py:356: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+  sqlalchemy.orm.configure_mappers()
+2026-11-23 22:56:37,155 INFO __main__: gate: test roc_auc = 0.7883 (min 0.7700) -> PASSED
+2026-11-23 22:56:37,155 INFO __main__: stage finished; outputs: {'gate': 'passed', 'roc_auc': 0.7883}
+Updating lock file 'dvc.lock'
+To enable auto staging, run:
+
+=== DONE 17:56:38
+== files that differ from the committed versions (git diff --stat, reports only):
+ reports/metrics.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)

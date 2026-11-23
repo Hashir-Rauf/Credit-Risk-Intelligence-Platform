@@ -50,7 +50,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 **Deliverables:** GitHub repo with protections; AWS budget; S3 bucket; OIDC provider; DagsHub project; skeleton merged via PR.
 **Exit criteria**
 - [ ] Direct push to `main` is rejected.
-- [ ] Pre-commit blocks a test commit containing a fake secret.
+- [x] Pre-commit blocks a test commit containing a fake secret (verified 2026-11-23: `docs/evidence/phase-0/precommit_blocks_secret.log`).
 - [ ] Budget alert email received (use the test notification).
 - [ ] Each member has cloned and run `make setup` successfully.
 
@@ -114,28 +114,30 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 3 — Automated tests and CI
-**Goal:** every PR is tested, scanned and gated. **Owner:** S2. **Prereq:** Phase 1 (start in parallel with 2).
+**Goal:** every PR is tested, scanned and gated. **Owner:** S2 → **[H]** (**[J]** writes feature/model tests). **Status 2026-11-23:** CI built and verified on GitHub; one admin setting left for the user (required check).
 
 **Steps**
-1. `tests/` by category: unit (preprocessing, feature functions, threshold logic), data (schema, nulls, types, invalid records), model (output shape, probabilities in [0,1], AUC ≥ threshold on a small fixed sample), API (added in Phase 4), integration (preprocess → load → predict), regression (candidate vs. stored `baseline_metrics.json`).
-2. Small deterministic fixtures in `tests/fixtures/` (a few hundred rows) so CI doesn't need the full dataset or DVC.
-3. `.github/workflows/ci.yml`, triggered on `push` and `pull_request`:
+1. **[J] ✅** `tests/` by category (unit, data, model, regression, Feast, fairness, drift, tuning exist; the API tests arrive in Phase 4): unit (preprocessing, feature functions, threshold logic), data (schema, nulls, types, invalid records), model (output shape, probabilities in [0,1], AUC ≥ threshold on a small fixed sample), API (added in Phase 4), integration (preprocess → load → predict), regression (candidate vs. stored `baseline_metrics.json`).
+2. **[J] ✅** Deterministic synthetic data in `tests/conftest.py` and a stored baseline in `tests/baselines/`, so CI needs neither the dataset nor DVC.
+3. **[H] ✅** `.github/workflows/ci.yml`, triggered on `push`, `pull_request` and manually (SHA-pinned actions, read-only token, py3.11 + `requirements.lock.txt`). Docker/Trivy job is wired but skips until Phase 4 adds `docker/Dockerfile.api`:
    - setup Python with pip cache → install
    - ruff, black --check
    - pytest with coverage (fail under a set minimum, e.g. 70 %)
    - bandit, pip-audit, gitleaks
    - build the Docker image (Phase 4 adds the Dockerfile) and Trivy-scan it
-4. Mark the jobs as **required status checks** on `main`.
-5. Create the evidence PRs: one with a deliberately failing test or sub-threshold model fixture (red), then the fix (green). Keep both runs' logs.
-6. Add a coverage badge and CI badge to the README.
+4. **[H] ⬜ (needs repo admin, you)** Mark **`CI passed`** as the required status check on `main`: steps in `docs/ci.md`. Until then CI reports but does not block.
+5. **[H] ✅** Red run (deliberate failing test) and green run (after the fix) on `evidence/ci-red-demo`; links in `docs/evidence/phase-3/README.md`.
+6. **[H] 🟡** CI badge added. Coverage badge deferred: it needs an external service (Codecov or a gist); coverage is enforced in CI (`fail_under = 70`, currently about 95%) and uploaded as an artifact.
 
 **Deliverables:** test suite, `ci.yml`, required checks, red and green runs.
 **Exit criteria**
-- [ ] A failing test or lint error blocks the merge button.
-- [ ] CI completes in < 10 minutes.
-- [ ] A bad-model fixture fails the model test, proving the gate works.
+- [ ] A failing test or lint error blocks the merge button. *(CI turns red and `CI passed` fails: proven. Becomes a hard block once step 4 is done.)*
+- [x] CI completes in < 10 minutes (7.5 min first run; 9.5 min worst observed).
+- [x] A bad-model fixture fails the model test: `test_the_check_catches_a_model_trained_on_shuffled_labels` (passes in CI, so the detection works).
 
-**Evidence:** red run + green run links/screenshots, branch-protection check list.
+**Evidence:** `docs/evidence/phase-3/README.md` (run links, per-job results), `docs/ci.md`. Screenshot of the branch-protection check list: take it after step 4.
+
+**Also done in this phase:** Phase 0 pre-commit exit criterion (`docs/evidence/phase-0/precommit_blocks_secret.log`); independent review of JA-Codex's Phase 2 (`docs/reviews/phase-2-review.md`); DVC hash fix (`fix/dvc-hash-hygiene`).
 
 ---
 

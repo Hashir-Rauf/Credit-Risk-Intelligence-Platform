@@ -20,6 +20,16 @@ _Last updated: 2026-11-20_
   - Skeleton folders with `.gitkeep` per `plan.md` §4 (`src/{data,features,models,serving,monitoring}`, `tests`, `pipelines/{airflow/dags,kubeflow/components}`, `configs`, `docker`, `k8s`, `monitoring`, `infra/aws`, `docs`, `feature_repo`, `data/{raw,processed}`, `frontend`, `.github/workflows`).
   - First commit on a branch `chore/phase-0-setup`, then a PR to `main`.
 
+## Phase 3 update (2026-11-23, branch `feat/phase-3-ci`, authored Hashir Rauf <hashirpriv04@gmail.com>)
+- **CI built and green on GitHub**: `.github/workflows/ci.yml` (lint, tests+coverage, bandit+pip-audit, gitleaks full history, docker/trivy skipped until `docker/Dockerfile.api`, aggregate job **`CI passed`**). Actions pinned to SHAs, py3.11, `requirements.lock.txt` + `requirements-ci.txt`. First run 7.5 min; slowest observed 9.5 min (tests). Red/green evidence runs on `evidence/ci-red-demo` (never merge it). Docs: `docs/ci.md`, `docs/security.md`, `docs/evidence/phase-3/README.md`.
+- **USER TODO (admin only):** mark `CI passed` as a required status check on `main`. Until then CI does not block merges.
+- Accepted vuln: `diskcache 5.6.3` PYSEC-2026-2447 (ignored in CI and `make security`, documented).
+- Phase 0 pre-commit criterion verified (`docs/evidence/phase-0/`). Hooks pinned to CI versions; `dvc.lock` excluded from hooks.
+- **Phase 2 reviewed** (`docs/reviews/phase-2-review.md`): metrics reproduce exactly; retrain on Windows py3.13 matched (only val log-loss differs by 1e-16). **Open decision for JA-Codex + Hashir before the Phase 4 API contract: probabilities are uncalibrated** (mean predicted 0.40 vs observed 0.22; class_weight inflates) -> calibrate or call the output a risk score.
+- **DVC fix on branch `fix/dvc-hash-hygiene`** (not merged yet): `dvc.lock` had hashed `__pycache__` into `src/common`/`feature_repo` and a CRLF report. `.dvcignore` + LF writer + `dvc commit` re-hash. Do not hand-edit or regenerate `dvc.lock` with `__pycache__` present before merging this.
+- GitHub API is unauthenticated here (60 req/hour): do not poll in loops; use the workflow badge (`.../actions/workflows/ci.yml/badge.svg?branch=X`) or the run web page instead.
+- Pitfall: Python `Path.write_text` on Windows writes CRLF; `git` normalises to LF (`.gitattributes`), but DVC hashes bytes, so write DVC-tracked text with `write_bytes`/`newline="\n"`.
+
 ## Update 2026-11-08 (later)
 - `.pre-commit-config.yaml` and skeleton folders (with `.gitkeep`) are written, not committed.
 - User confirmed: AWS budget created; branch protection enabled on `main`; third teammate will not touch code (no CODEOWNERS entry needed); DagsHub project exists at https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform (AI to init/manage the MLflow/DVC wiring; needs a DagsHub token in local `.env`).
