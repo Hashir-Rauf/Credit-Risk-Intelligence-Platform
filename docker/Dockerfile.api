@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1
+# Scoring API image. Two targets:
+#   runtime     (default) no model inside; mount ./models at /app/models (compose does this) or set MODEL_URI.
+#   with-model  copies ./models into the image (CD pulls it from DVC first); a self-contained artifact.
+# Multi-stage, non-root, slim base, no secrets, no data (see .dockerignore).
+
+FROM python:3.11-slim-bookworm AS builder
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+WORKDIR /build
+COPY requirements.lock.txt requirements-serve.txt ./
+# The lock file pins every transitive version; only the serving packages are actually installed.
+RUN pip install -c requirements.lock.txt -r requirements-serve.txt
+
+
+FROM python:3.11-slim-bookworm AS runtime
+ARG GIT_SHA=unknown
+ARG MODEL_VERSION=unknown
+LABEL org.opencontainers.image.title="credit-risk-api" \
+      org.opencontainers.image.description="Credit default risk scoring API (coursework, not a lending tool)" \
+      org.opencontainers.image.revision="${GIT_SHA}"
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    GIT_SHA=${GIT_SHA} \
+    MODEL_VERSION=${MODEL_VERSION}
+
+# Non-root user with a fixed uid so Kubernetes can enforce runAsNonRoot.
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
+
+WORKDIR /app
+COPY --from=builder /opt/venv /opt/venv
+COPY src ./src
+COPY params.yaml dvc.lock ./
+COPY reports/feature_schema.json reports/metrics.json reports/evaluation.json ./reports/
+RUN mkdir -p /app/models && chown -R app:app /app
+USER app
+
+EXPOSE 8000
+# /health is 503 until a model is loaded, so an empty container reports "unhealthy" honestly.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"]
+
+# One worker with threads: metrics stay exact in-process; scale with replicas, not workers.
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", \
+     "--timeout", "60", "--graceful-timeout", "30", "src.serving.wsgi:app"]
+
+
+FROM runtime AS with-model
+USER root
+COPY models/model.joblib models/explainer_background.parquet /app/models/
+RUN chown -R app:app /app/models
+USER app

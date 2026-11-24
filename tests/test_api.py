@@ -456,6 +456,7 @@ def test_holder_picks_up_a_model_that_appears_later(artifacts, tmp_path):
 
 
 def test_model_uri_loads_through_mlflow(artifacts, monkeypatch):
+    pytest.importorskip("mlflow", reason="serving image does not ship mlflow")
     import mlflow.sklearn
 
     calls = []
@@ -468,6 +469,7 @@ def test_model_uri_loads_through_mlflow(artifacts, monkeypatch):
 
 
 def test_a_failing_mlflow_load_is_reported_without_details(artifacts, monkeypatch):
+    pytest.importorskip("mlflow", reason="serving image does not ship mlflow")
     import mlflow.sklearn
 
     def fail(_uri):
