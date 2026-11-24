@@ -1,3 +1,11 @@
 # Add patterns of files dvc should ignore, which could improve
 # the performance. Learn more at
 # https://dvc.org/doc/user-guide/dvcignore
+
+# Compiled bytecode and tool caches differ per machine/Python version and must not change the
+# hash of directory dependencies (deps: src/common, feature_repo).
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

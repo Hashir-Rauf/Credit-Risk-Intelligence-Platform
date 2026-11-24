@@ -1,0 +1,35 @@
+# Independent audit of the committed Phase 2 model - 2026-11-23T17:57:43Z
+# Inputs: dvc pull -r dagshub of main@273e853 (data/processed/*.parquet, models/model.joblib). Script: phase2_audit.py
+# Env: Python 3.13.5, pandas 2.3.3, scikit-learn 1.9.1
+
+== 1. split integrity
+sizes: 21000 4500 4500 sum 30000 raw 30000
+id overlap train/val, train/test, val/test: 0 0 0
+union == raw ids: True
+default rate raw/train/val/test: 0.2212 0.2212 0.2211 0.2213
+test rows whose exact feature+label twin is in train (duplicate leakage): 6 of 4500
+== 2. recompute test metrics from the saved model
+roc_auc    mine=0.7883 reported=0.7883 diff=0.00e+00
+pr_auc     mine=0.5782 reported=0.5782 diff=0.00e+00
+ks         mine=0.4401 reported=0.4401 diff=0.00e+00
+brier      mine=0.1667 reported=0.1667 diff=0.00e+00
+precision  mine=0.5094 reported=0.5094 diff=0.00e+00
+recall     mine=0.6004 reported=0.6004 diff=0.00e+00
+accuracy   mine=0.7836 reported=0.7836 diff=0.00e+00
+model input columns (20): sensitive/ID/target present? []
+== 3. is the model better than trivial?
+majority-class accuracy: 0.7787 vs model 0.7836
+constant-prediction Brier: 0.1723 vs model 0.1667
+== 4. calibration (class_weight inflates probabilities)
+mean predicted prob 0.4010 vs observed default rate 0.2213
+                mean_pred  observed    n
+(0.104, 0.215]      0.164     0.054  900
+(0.215, 0.31]       0.263     0.096  900
+(0.31, 0.395]       0.352     0.157  900
+(0.395, 0.578]      0.469     0.218  900
+(0.578, 0.954]      0.756     0.582  900
+== 5. gate margin / noise
+test ROC-AUC 95% bootstrap CI: [0.7722, 0.8039]  (gate 0.77)
+share of bootstrap resamples below the gate: 1.5%
+== 6. what drives the model
+[('PAY_1', 0.113), ('pay_delay_max', 0.11), ('pay_delay_mean', 0.097), ('months_delayed', 0.096), ('PAY_2', 0.05), ('PAY_AMT1', 0.032), ('util_max', 0.031), ('util_mean', 0.03)]

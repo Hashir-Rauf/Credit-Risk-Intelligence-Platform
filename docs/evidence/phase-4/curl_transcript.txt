@@ -1,0 +1,82 @@
+# curl transcript against the running API container (credit-risk-api:local, uid 10001, real champion model v1) - 2026-11-24
+# API_KEY is a random value generated for this test and shown as $API_KEY. Request bodies are real rows of the held-out test split.
+
+$ curl -s $U/health
+{"status":"ok","model_loaded":true,"model_version":"1","uptime_s":12.5}
+
+[HTTP 200]
+
+$ curl -s -X POST $U/predict -d @one.json            (NO key)
+{"error":{"code":"unauthorized","message":"missing or invalid API key","request_id":"9f5ed1f4bbb5430687222d6fa28aaa1b"}}
+
+[HTTP 401]
+
+$ curl -s -X POST $U/predict -H "X-API-Key: wrong"   (WRONG key)
+{"error":{"code":"unauthorized","message":"missing or invalid API key","request_id":"82a0eefc971543b4b9e46650e7271112"}}
+
+[HTTP 401]
+
+$ curl -s -X POST $U/predict -H "X-API-Key: $API_KEY" -d @one.json   (valid, single record)
+{"request_id":"0e3750fe64924ab1b514d205e8f6ec7e","model_version":"1","threshold":0.5,"score_type":"uncalibrated_risk_score","predictions":[{"risk_score":0.409575,"prediction":0}],"ignored_fields":[],"disclaimer":"Educational model for a university course. Not a real lending decision tool. risk_score is a model ranking score, not
+
+[HTTP 200]
+
+$ curl ... -d @batch.json   (valid, batch of 3)
+{"request_id":"6e889773696644b7bbaf23074241284b","model_version":"1","threshold":0.5,"score_type":"uncalibrated_risk_score","predictions":[{"risk_score":0.409575,"prediction":0},{"risk_score":0.234775,"prediction":0},{"risk_score":0.504677,"prediction":1}],"ignored_fields":[],"disclaimer":"Educational model for a university cour
+
+[HTTP 200]
+
+$ curl ... -d @bad.json   (PAY_1=55 and LIMIT_BAL="lots")
+{"error":{"code":"validation_failed","message":"1 of 1 record(s) are invalid","request_id":"ba506e4c0f3d4536811553301fd71990","details":[{"index":0,"errors":[{"field":"LIMIT_BAL","code":"type","message":"must be a number"},{"field":"PAY_1","code":"range","message":"must be between -2 and 9"}]}]}}
+
+[HTTP 422]
+
+$ curl ... -d "{not json"   (malformed JSON)
+{"error":{"code":"bad_request","message":"the request body is not valid JSON","request_id":"65286cd090bc4df285bbdfa582e27181"}}
+
+[HTTP 400]
+
+$ curl ... -d "{}"   (empty object)
+{"error":{"code":"bad_request","message":"the body is empty","request_id":"cba27bac92314decb8e6f36852acbc07"}}
+
+[HTTP 400]
+
+$ curl ... -H "Content-Type: text/plain"   (not JSON)
+{"error":{"code":"unsupported_media_type","message":"send the body as JSON with \"Content-Type: application/json\"","request_id":"630df19bcfe840779349bf879f2fef71"}}
+
+[HTTP 415]
+
+$ curl ... --data-binary @2MB-of-junk   (oversize body, limit 1 MB)
+{"error":{"code":"payload_too_large","message":"request body is larger than 1000000 bytes","request_id":"7c7630d13dcd47fba7f35be15ec666c0"}}
+
+[HTTP 413]
+
+$ curl ... -d @one.json "$U/explain?top_k=3"
+{"request_id":"f9b13d1ecffb45f4832eedf6f53f2151","model_version":"1","threshold":0.5,"score_type":"uncalibrated_risk_score","explanations":[{"risk_score":0.409575,"prediction":0,"log_odds":-0.3657235760870957,"base_value":-0.4744584911419008,"factors":[{"feature":"LIMIT_BAL","label":"Credit limit","value":-0.906445703906096,"con
+
+[HTTP 200]
+
+$ curl -s -H "X-API-Key: $API_KEY" $U/model-info   (first 700 characters)
+{"model_name":"credit-risk-default-model","model_version":"1","model_source":"models/model.joblib","model_sha256":"b25751bf8d5e362c58c2c1b73ae4e8ddf157d25f4ee5b223d0877bcada5298d5","algorithm":"RandomForestClassifier","git_sha":"3c8419b","raw_data_md5":"a7e80c905840715d8456fe06d935f981","threshold":0.5,"score":{"name":"risk_scor
+
+
+$ curl -s $U/metrics | grep -E "^api_(requests_total|predictions_total|validation)"
+api_requests_total{method="GET",route="/health",status="200"} 3.0
+api_requests_total{method="POST",route="/predict",status="401"} 2.0
+api_requests_total{method="POST",route="/predict",status="200"} 2.0
+api_requests_total{method="POST",route="/predict",status="422"} 1.0
+api_requests_total{method="POST",route="/predict",status="400"} 2.0
+api_requests_total{method="POST",route="/predict",status="415"} 1.0
+api_requests_total{method="POST",route="/predict",status="413"} 1.0
+api_requests_total{method="POST",route="/explain",status="200"} 1.0
+api_requests_total{method="GET",route="/model-info",status="200"} 1.0
+api_predictions_total{model_version="1",outcome="not_flagged"} 3.0
+api_predictions_total{model_version="1",outcome="flagged"} 1.0
+api_validation_failures_total{code="type"} 1.0
+api_validation_failures_total{code="range"} 1.0
+api_validation_failures_created{code="type"} 1.7954840358987086e+09
+api_validation_failures_created{code="range"} 1.795484035898718e+09
+
+$ docker exec credit-risk-api-test id   -> uid=10001(app) gid=10001(app) groups=10001(app)
+$ docker inspect --format "{{.State.Health.Status}}" credit-risk-api-test   -> healthy
+$ docker image inspect credit-risk-api:local --format "{{.Size}}"   -> 303414693 bytes

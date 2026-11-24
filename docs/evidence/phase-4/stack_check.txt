@@ -1,0 +1,31 @@
+# Full-stack check, docker compose (base + dev), real champion model v1 - 2026-11-24
+# Services: api, frontend, postgres, mlflow, prometheus, grafana
+
+frontend /api/health -> 200 {"frontend":"ok","api":"ok","api_status":200}
+browser-path POST frontend /api/predict (Struggling preset) -> 200 [{'risk_score': 0.849577, 'prediction': 1}] | score_type: uncalibrated_risk_score
+browser-path POST frontend /api/explain -> 200 [('Repayment status, month 1', 0.344), ('Months with a delayed payment', 0.298), ('Average payment delay (months)', 0.262)]
+Reliable payer preset -> 200 [{'risk_score': 0.142017, 'prediction': 0}]
+API directly WITHOUT a key -> 401 (auth enforced; the frontend holds the key)
+frontend home page -> 200 | contains API key: False
+prometheus targets -> [('credit-risk-api', 'up'), ('prometheus', 'up')]
+prometheus query api_requests_total{/predict,200} -> 2
+prometheus predictions by outcome -> [('flagged', '1'), ('not_flagged', '1')]
+grafana /api/health -> 200 ok
+grafana datasources -> [('Prometheus', 'prometheus', 'http://prometheus:9090')]
+mlflow /health -> 0 <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>
+Traceback (most recent call last):
+  File "<stdin>", line 30, in <module>
+  File "C:\Users\Hashir Rauf\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\Hashir Rauf\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Hashir Rauf\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+# Second pass after fixing the MLflow database driver (postgresql+psycopg2://)
+mlflow /health -> 200 OK
+mlflow experiments (Postgres backend) -> [('0', 'Default')]
+bug found and fixed by this run: SQLAlchemy 2.1 defaults 'postgresql://' to psycopg v3; the URI now names psycopg2 explicitly.

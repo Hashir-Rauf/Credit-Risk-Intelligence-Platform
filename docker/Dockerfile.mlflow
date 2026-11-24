@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+# MLflow tracking server for the local stack (backend: Postgres, artifacts: a volume).
+# Versions come from requirements.lock.txt so the server matches the client that logs runs.
+FROM python:3.11-slim-bookworm
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONUNBUFFERED=1
+WORKDIR /build
+COPY requirements.lock.txt ./
+RUN pip install -c requirements.lock.txt "mlflow==3.18.0" "psycopg2-binary==2.9.10"
+
+RUN groupadd --system --gid 10001 mlflow \
+ && useradd --system --uid 10001 --gid mlflow --home-dir /mlflow --shell /usr/sbin/nologin mlflow \
+ && mkdir -p /mlflow/artifacts && chown -R mlflow:mlflow /mlflow
+USER mlflow
+WORKDIR /mlflow
+EXPOSE 5000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=4).status == 200 else 1)"]
+# The backend URI comes from the environment (compose), never from the image.
+CMD ["sh", "-c", "exec mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri \"$MLFLOW_BACKEND_STORE_URI\" --artifacts-destination /mlflow/artifacts --serve-artifacts"]

@@ -1,0 +1,18 @@
+# Top-level packages the scoring API needs at run time. Install with the lock file as CONSTRAINTS,
+# so every package (and its dependencies) lands on the exact version the model was trained with:
+#
+#   pip install -c requirements.lock.txt -r requirements-serve.txt
+#
+# Deliberately not here: mlflow, dvc, feast, optuna, bentoml, pytest (training/CI tooling).
+# `MODEL_URI` (loading from the MLflow registry) needs mlflow; the default image loads a file instead.
+flask
+gunicorn
+pandas
+numpy
+scikit-learn
+joblib
+pyarrow
+pyyaml
+shap
+prometheus-client
+python-json-logger

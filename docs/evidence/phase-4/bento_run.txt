@@ -1,0 +1,6 @@
+# BentoML service run (bentoml serve src.serving.bento_service:CreditRisk), 2026-11-24
+POST /model_info -> 200 {'algorithm': 'RandomForestClassifier', 'threshold': 0.5, 'raw_data_md5': 'a7e80c905840715d8456fe06d935f981', 'model_version': '1'}
+POST /predict (100 records) -> 200 in 0.12s | first: {'risk_score': 0.409575, 'prediction': 0}
+ROC-AUC over the full 4,500-row test split via the Bento: 0.7883 (reported 0.7883)
+invalid record -> 400 [{'error': "invalid records: [{'index': 0, 'errors': [{'field': 'PAY_1', 'code': 'range', 'message': 'must be between -2 and 9'}]}]"}]
+empty batch -> 400 [{'error': '"records" must be a non-empty list'}]

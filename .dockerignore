@@ -1,0 +1,46 @@
+# Keep the build context small and free of secrets/data. (rules.md: .dockerignore excludes data, .git, secrets)
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# secrets and local config
+.env
+.env.*
+!.env.example
+.dvc/config.local
+.dvc/cache
+.dvc/tmp
+*.pem
+*.key
+.aws
+.claude
+
+# data and generated state (the model is added explicitly by the `with-model` target)
+data
+mlruns
+mlflow.db
+mlartifacts
+reports/plots
+
+# not needed in a runtime image
+tests
+docs
+notebooks
+frontend
+k8s
+infra
+monitoring
+scripts
+pipelines
+feature_repo
+graphify-out
+*.md
+!requirements*.txt

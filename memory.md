@@ -20,6 +20,26 @@ _Last updated: 2026-11-20_
   - Skeleton folders with `.gitkeep` per `plan.md` §4 (`src/{data,features,models,serving,monitoring}`, `tests`, `pipelines/{airflow/dags,kubeflow/components}`, `configs`, `docker`, `k8s`, `monitoring`, `infra/aws`, `docs`, `feature_repo`, `data/{raw,processed}`, `frontend`, `.github/workflows`).
   - First commit on a branch `chore/phase-0-setup`, then a PR to `main`.
 
+## Phase 4 update (2026-11-24, branch `feat/phase-4-serving`; ONE combined PR: Phase 3 CI + DVC fix + Phase 4)
+- Built: Flask API (`src/serving/`: app, schemas, settings, model_loader, wsgi, bento_service), `src/monitoring/metrics.py`, 67 API tests, `docker/Dockerfile.{api,mlflow}`, `docker-compose{,.dev,.prod}.yml`, `requirements-serve.txt` (37 packages, lock used as constraints), `bentofile.yaml`, `frontend/` (Next.js 16, server-side proxy, 14 unit + 7 Playwright tests), `monitoring/` (prometheus + grafana datasource), CI frontend job + container smoke + Trivy of both images. Docs: `docs/serving.md`, `docs/evidence/phase-4/`.
+- Verified against the REAL champion v1: ROC-AUC 0.7883 through the API, through the Bento, container healthy uid 10001, whole compose stack up (6 services), Prometheus scrapes API, UI screenshots.
+- **API returns `risk_score` (uncalibrated), never `probability`.** Decision recorded in `docs/serving.md`; when JA-Codex calibrates the model, add a `probability` field.
+- Bugs found only by running it for real (all fixed): `/metrics` needed a key; MLflow needed `postgresql+psycopg2://` (SQLAlchemy 2.1); default Docker target baked the model in; empty `frontend/public` not tracked; frontend lock lacked Linux natives (regenerate ONLY from a clean folder, see `frontend/README.md`).
+- Pitfalls: detached `( cmd & )` subshells die when the tool call ends - run long jobs as the tool's own background command; Docker Desktop must be started (`Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"`); other containers on this machine (hive-acme, minikube, element1-*) are NOT ours, never touch them; compose project name is `credit-risk`.
+- **CI is GREEN** on the combined branch (run 45317211962: tests 7m31s parallel via xdist, Docker+Trivy both images clean, frontend, security, gitleaks). Trivy findings were fixed by removing npm/corepack (frontend) and setuptools/wheel (API) from runtime images, not by suppression.
+- **USER TODO:** open the combined PR from `feat/phase-4-serving`; mark `CI passed` required; second-machine `docker compose up` test (needs a teammate); decide model calibration with JA-Codex.
+- Not done / next: Phase 5 (Airflow + Kubeflow), Phase 6 (AWS deploy; IAM OIDC provider is blocked by SCP - see AWS findings), 7 (k8s), 8 (monitoring/retrain; Admin promote/rollback buttons are disabled placeholders), customer-id scoring via Feast (not exposed), rate limiting (Phase 9).
+
+## Phase 3 update (2026-11-23, branch `feat/phase-3-ci`, authored Hashir Rauf <hashirpriv04@gmail.com>)
+- **CI built and green on GitHub**: `.github/workflows/ci.yml` (lint, tests+coverage, bandit+pip-audit, gitleaks full history, docker/trivy skipped until `docker/Dockerfile.api`, aggregate job **`CI passed`**). Actions pinned to SHAs, py3.11, `requirements.lock.txt` + `requirements-ci.txt`. First run 7.5 min; slowest observed 9.5 min (tests). Red/green evidence runs on `evidence/ci-red-demo` (never merge it). Docs: `docs/ci.md`, `docs/security.md`, `docs/evidence/phase-3/README.md`.
+- **USER TODO (admin only):** mark `CI passed` as a required status check on `main`. Until then CI does not block merges.
+- Accepted vuln: `diskcache 5.6.3` PYSEC-2026-2447 (ignored in CI and `make security`, documented).
+- Phase 0 pre-commit criterion verified (`docs/evidence/phase-0/`). Hooks pinned to CI versions; `dvc.lock` excluded from hooks.
+- **Phase 2 reviewed** (`docs/reviews/phase-2-review.md`): metrics reproduce exactly; retrain on Windows py3.13 matched (only val log-loss differs by 1e-16). **Open decision for JA-Codex + Hashir before the Phase 4 API contract: probabilities are uncalibrated** (mean predicted 0.40 vs observed 0.22; class_weight inflates) -> calibrate or call the output a risk score.
+- **DVC fix on branch `fix/dvc-hash-hygiene`** (not merged yet): `dvc.lock` had hashed `__pycache__` into `src/common`/`feature_repo` and a CRLF report. `.dvcignore` + LF writer + `dvc commit` re-hash. Do not hand-edit or regenerate `dvc.lock` with `__pycache__` present before merging this.
+- GitHub API is unauthenticated here (60 req/hour): do not poll in loops; use the workflow badge (`.../actions/workflows/ci.yml/badge.svg?branch=X`) or the run web page instead.
+- Pitfall: Python `Path.write_text` on Windows writes CRLF; `git` normalises to LF (`.gitattributes`), but DVC hashes bytes, so write DVC-tracked text with `write_bytes`/`newline="\n"`.
+
 ## Update 2026-11-08 (later)
 - `.pre-commit-config.yaml` and skeleton folders (with `.gitkeep`) are written, not committed.
 - User confirmed: AWS budget created; branch protection enabled on `main`; third teammate will not touch code (no CODEOWNERS entry needed); DagsHub project exists at https://dagshub.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform (AI to init/manage the MLflow/DVC wiring; needs a DagsHub token in local `.env`).

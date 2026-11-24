@@ -50,7 +50,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 **Deliverables:** GitHub repo with protections; AWS budget; S3 bucket; OIDC provider; DagsHub project; skeleton merged via PR.
 **Exit criteria**
 - [ ] Direct push to `main` is rejected.
-- [ ] Pre-commit blocks a test commit containing a fake secret.
+- [x] Pre-commit blocks a test commit containing a fake secret (verified 2026-11-23: `docs/evidence/phase-0/precommit_blocks_secret.log`).
 - [ ] Budget alert email received (use the test notification).
 - [ ] Each member has cloned and run `make setup` successfully.
 
@@ -114,58 +114,60 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 3 — Automated tests and CI
-**Goal:** every PR is tested, scanned and gated. **Owner:** S2. **Prereq:** Phase 1 (start in parallel with 2).
+**Goal:** every PR is tested, scanned and gated. **Owner:** S2 → **[H]** (**[J]** writes feature/model tests). **Status 2026-11-23:** CI built and verified on GitHub; one admin setting left for the user (required check).
 
 **Steps**
-1. `tests/` by category: unit (preprocessing, feature functions, threshold logic), data (schema, nulls, types, invalid records), model (output shape, probabilities in [0,1], AUC ≥ threshold on a small fixed sample), API (added in Phase 4), integration (preprocess → load → predict), regression (candidate vs. stored `baseline_metrics.json`).
-2. Small deterministic fixtures in `tests/fixtures/` (a few hundred rows) so CI doesn't need the full dataset or DVC.
-3. `.github/workflows/ci.yml`, triggered on `push` and `pull_request`:
+1. **[J] ✅** `tests/` by category (unit, data, model, regression, Feast, fairness, drift, tuning exist; the API tests arrive in Phase 4): unit (preprocessing, feature functions, threshold logic), data (schema, nulls, types, invalid records), model (output shape, probabilities in [0,1], AUC ≥ threshold on a small fixed sample), API (added in Phase 4), integration (preprocess → load → predict), regression (candidate vs. stored `baseline_metrics.json`).
+2. **[J] ✅** Deterministic synthetic data in `tests/conftest.py` and a stored baseline in `tests/baselines/`, so CI needs neither the dataset nor DVC.
+3. **[H] ✅** `.github/workflows/ci.yml`, triggered on `push`, `pull_request` and manually (SHA-pinned actions, read-only token, py3.11 + `requirements.lock.txt`). Docker/Trivy job is wired but skips until Phase 4 adds `docker/Dockerfile.api`:
    - setup Python with pip cache → install
    - ruff, black --check
    - pytest with coverage (fail under a set minimum, e.g. 70 %)
    - bandit, pip-audit, gitleaks
    - build the Docker image (Phase 4 adds the Dockerfile) and Trivy-scan it
-4. Mark the jobs as **required status checks** on `main`.
-5. Create the evidence PRs: one with a deliberately failing test or sub-threshold model fixture (red), then the fix (green). Keep both runs' logs.
-6. Add a coverage badge and CI badge to the README.
+4. **[H] ⬜ (needs repo admin, you)** Mark **`CI passed`** as the required status check on `main`: steps in `docs/ci.md`. Until then CI reports but does not block.
+5. **[H] ✅** Red run (deliberate failing test) and green run (after the fix) on `evidence/ci-red-demo`; links in `docs/evidence/phase-3/README.md`.
+6. **[H] 🟡** CI badge added. Coverage badge deferred: it needs an external service (Codecov or a gist); coverage is enforced in CI (`fail_under = 70`, currently about 95%) and uploaded as an artifact.
 
 **Deliverables:** test suite, `ci.yml`, required checks, red and green runs.
 **Exit criteria**
-- [ ] A failing test or lint error blocks the merge button.
-- [ ] CI completes in < 10 minutes.
-- [ ] A bad-model fixture fails the model test, proving the gate works.
+- [ ] A failing test or lint error blocks the merge button. *(CI turns red and `CI passed` fails: proven. Becomes a hard block once step 4 is done.)*
+- [x] CI completes in < 10 minutes (7.5 min first run; 9.5 min worst observed).
+- [x] A bad-model fixture fails the model test: `test_the_check_catches_a_model_trained_on_shuffled_labels` (passes in CI, so the detection works).
 
-**Evidence:** red run + green run links/screenshots, branch-protection check list.
+**Evidence:** `docs/evidence/phase-3/README.md` (run links, per-job results), `docs/ci.md`. Screenshot of the branch-protection check list: take it after step 4.
+
+**Also done in this phase:** Phase 0 pre-commit exit criterion (`docs/evidence/phase-0/precommit_blocks_secret.log`); independent review of JA-Codex's Phase 2 (`docs/reviews/phase-2-review.md`); DVC hash fix (`fix/dvc-hash-hygiene`).
 
 ---
 
 ## Phase 4 — Serving, containers, frontend
-**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** S3 (API/Docker/BentoML), S1 (frontend). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.**
+**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** all **[H]** (CODEOWNERS: serving, docker, frontend are Hashir's; the model contract is **[J]**'s). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.** **Status 2026-11-24: built, verified locally and green in CI; combined PR ready to open.** Docs: `docs/serving.md`.
 
 **Steps (API, S3)**
-1. `src/serving/app.py` (Flask app factory), `schemas.py` (request validation), `model_loader.py` (load the registered model by alias from MLflow/S3 once at startup).
-2. Endpoints: `GET /health` (liveness plus model-loaded flag), `GET /model-info` (version, run ID, metrics, trained-at, data version, git SHA), `POST /predict` (single and batch; returns probability, label, threshold, model_version, request_id).
-3. Error handling: 400 malformed JSON, 422 schema/range errors, 413 oversize, 500 safe message with no stack trace; API-key check via header.
-4. `src/monitoring/metrics.py`: Prometheus counters/histograms and `/metrics`. Structured JSON logs with no raw inputs.
-5. `tests/test_api.py`: valid, missing field, wrong type, out-of-range, empty body, oversize, bad key, `/model-info` contents.
-6. `docker/Dockerfile.api`: slim base, multi-stage, non-root, gunicorn, `HEALTHCHECK`, no secrets/data. `.dockerignore`.
-7. `docker-compose.yml` + `docker-compose.dev.yml` / `docker-compose.prod.yml`: api, mlflow, postgres, prometheus, grafana.
-8. BentoML: `bentofile.yaml`, build a Bento from the registered model; document its role (packaging/alt serving path) and run it once.
-9. **Cross-machine test:** teammate runs `docker compose up` on another laptop from the README only; record the result.
+1. **[H] ✅** `src/serving/app.py` (Flask app factory), `schemas.py` (request validation), `model_loader.py` (load the registered model by alias from MLflow/S3 once at startup).
+2. **[H] ✅** Endpoints (+ `POST /explain`; returns `risk_score`, not `probability`, because the model is uncalibrated, see `docs/reviews/phase-2-review.md`): `GET /health` (liveness plus model-loaded flag), `GET /model-info` (version, run ID, metrics, trained-at, data version, git SHA), `POST /predict` (single and batch; returns probability, label, threshold, model_version, request_id).
+3. **[H] ✅** Error handling (also 401, 404/405, 415, 503; every error is JSON with a request id): 400 malformed JSON, 422 schema/range errors, 413 oversize, 500 safe message with no stack trace; API-key check via header.
+4. **[H] ✅** `src/monitoring/metrics.py`: Prometheus counters/histograms and `/metrics`. Structured JSON logs with no raw inputs.
+5. **[H] ✅** `tests/test_api.py` (67 tests incl. log/metric hygiene and Bento parity): valid, missing field, wrong type, out-of-range, empty body, oversize, bad key, `/model-info` contents.
+6. **[H] ✅** `docker/Dockerfile.api` (multi-stage, uid 10001, healthcheck; slim 37-package install from the lock as constraints; `with-model` target for deployment): slim base, multi-stage, non-root, gunicorn, `HEALTHCHECK`, no secrets/data. `.dockerignore`.
+7. **[H] ✅** `docker-compose.yml` + `docker-compose.dev.yml` / `docker-compose.prod.yml`: api, mlflow, postgres, prometheus, grafana.
+8. **[H] ✅** BentoML (built, served once, full test split scores ROC-AUC 0.7883 through it; `docs/evidence/phase-4/bento_run.txt`): `bentofile.yaml`, build a Bento from the registered model; document its role (packaging/alt serving path) and run it once.
+9. **[H] ⬜ needs a teammate:** **Cross-machine test:** teammate runs `docker compose up` on another laptop from the README only; record the result.
 
 **Steps (frontend, S1; start once the API schema is frozen)**
-10. Next.js app (App Router, TypeScript), `app/api/predict` and `app/api/model-info` route handlers adding the API key server-side.
-11. Pages: Score applicant (form, presets, gauge, risk band, SHAP factors), Model & data, Monitoring links, Admin (champion vs. challenger, promote/rollback trigger).
-12. `frontend/Dockerfile` (standalone output, non-root); add to Compose; Playwright smoke test; add the Node job to CI.
+10. **[H] ✅** Next.js app (App Router, TypeScript), `app/api/predict` and `app/api/model-info` route handlers adding the API key server-side.
+11. **[H] ✅** Pages (Admin promote/rollback is shown disabled until Phase 8): Score applicant (form, presets, gauge, risk band, SHAP factors), Model & data, Monitoring links, Admin (champion vs. challenger, promote/rollback trigger).
+12. **[H] ✅** `frontend/Dockerfile` (standalone output, non-root); add to Compose; Playwright smoke test; add the Node job to CI.
 
 **Deliverables:** Flask API, tests, Dockerfile, Compose stack, Bento, Next.js UI.
 **Exit criteria**
-- [ ] `docker compose up` brings up the full stack; `curl` examples in the README work.
-- [ ] All API tests pass in CI; image passes Trivy (no unaccepted high/critical).
+- [x] `docker compose up` brings up the full stack (6 services healthy, `docs/evidence/phase-4/stack_check.txt`); `curl` transcript in `docs/evidence/phase-4/curl_transcript.txt`.
+- [x] All API tests pass in CI; both images pass Trivy with no unaccepted high/critical (CI run 45317211962, all jobs green).
 - [ ] Verified on a second machine.
-- [ ] UI scores a customer end to end; the API key is not visible in the browser dev tools.
+- [x] UI scores a customer end to end; the API key is not visible in the browser (Playwright test, plus a mutation check proving the assertion can fail).
 
-**Evidence:** curl transcript (valid and malformed), `/model-info` JSON, second-machine recording, UI screenshots.
+**Evidence:** `docs/evidence/phase-4/README.md` (curl transcript, full-stack check, Bento run, 9 UI screenshots). Second-machine recording: pending a teammate.
 
 ---
 
