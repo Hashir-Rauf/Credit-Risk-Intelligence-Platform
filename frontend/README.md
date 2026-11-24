@@ -13,17 +13,21 @@ Next.js (App Router, TypeScript). Owner: `@Hashir-Rauf`. Full architecture: [`do
 ## Develop
 ```bash
 cp .env.example .env.local      # API_URL, API_KEY (server-side only)
-npm install                     # Windows/macOS developers: use `install`, not `ci` (see below)
+npm ci
 npm run dev
 npm run lint && npm run typecheck && npm test      # checks
 npm run build && npx playwright install chromium && npm run e2e   # browser smoke test against a mock API
 ```
 
 ## Lock file
-`package-lock.json` is generated on **Linux** (CI and the Docker build run `npm ci` there). npm records native optional
-packages only for the platform that generated the lock, so `npm ci` on Windows or macOS reports "Missing: ... from lock
-file". Use `npm install` locally. To refresh the lock, regenerate it in Linux, not on your laptop:
+`package-lock.json` must list the native optional packages of **every** platform (Windows, macOS, Linux glibc and musl),
+because developers run Windows, CI runs Ubuntu and the Docker image runs Alpine. npm only does that when the lock is
+generated from a folder that has **no `node_modules`** (an existing install makes npm record only what it installed).
+So never regenerate it in place; use a clean folder:
 ```bash
-docker run --rm -v "$PWD:/app" -w /app node:22.23.5-alpine3.24 sh -c "rm -f package-lock.json && npm install --package-lock-only --no-audit --no-fund"
+mkdir /tmp/lock && cp package.json .npmrc /tmp/lock && cd /tmp/lock
+docker run --rm -v "$PWD:/w" -w /w node:22.23.5-bookworm-slim npm install --package-lock-only --no-audit --no-fund
+cp package-lock.json <repo>/frontend/package-lock.json
 ```
-Dependencies are pinned to exact versions (`.npmrc`: `save-exact=true`).
+`npm ci` then works on Windows, macOS and Linux (verified on Windows, Alpine and Debian). Dependencies are pinned to exact
+versions (`.npmrc`: `save-exact=true`).

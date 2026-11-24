@@ -118,7 +118,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build the API image
-        run: docker build -f docker/Dockerfile.api -t credit-risk-api:ci .
+        run: docker build -f docker/Dockerfile.api --target runtime -t credit-risk-api:ci .
       - name: Build the frontend image
         run: docker build -t credit-risk-frontend:ci frontend
       - name: Smoke test the API container (no model inside, so it must say 503)
