@@ -244,6 +244,7 @@ def test_malformed_json_is_400(client):
     )
     assert response.status_code == 400
     assert response.get_json()["error"]["code"] == "bad_request"
+    assert "not valid JSON" in response.get_json()["error"]["message"]
 
 
 def test_non_json_content_type_is_415(client):
@@ -513,3 +514,41 @@ def test_warm_up_runs_in_the_background_without_blocking_start(artifacts):
     env = make_env(artifacts["root"], WARMUP_EXPLAIN="1")
     app = create_app(Settings.from_env(env))
     assert app.test_client().get("/health").status_code == 200
+
+
+# --------------------------------------------------------------------------- BentoML parity
+
+
+@pytest.fixture()
+def bento(artifacts, monkeypatch):
+    pytest.importorskip("bentoml", reason="the slim serving image does not ship bentoml")
+    for key, value in make_env(artifacts["root"]).items():
+        monkeypatch.setenv(key, value)
+    from src.serving.bento_service import CreditRisk
+
+    return CreditRisk.inner()
+
+
+def test_bento_scores_exactly_like_the_flask_api(bento, client, artifacts):
+    frame = artifacts["frame"][artifacts["columns"]].iloc[:4]
+    records = json.loads(frame.to_json(orient="records"))
+    via_flask = client.post("/predict", json={"records": records}, headers=HEADERS).get_json()
+    via_bento = bento.predict(records)
+    assert via_bento["predictions"] == via_flask["predictions"]
+    assert via_bento["score_type"] == via_flask["score_type"] == "uncalibrated_risk_score"
+
+
+def test_bento_rejects_invalid_records_like_the_api(bento, record):
+    import bentoml
+
+    with pytest.raises(bentoml.exceptions.InvalidArgument, match="PAY_1"):
+        bento.predict([{**record, "PAY_1": 55}])
+    with pytest.raises(bentoml.exceptions.InvalidArgument):
+        bento.predict([])
+
+
+def test_bento_model_info_matches(bento, client):
+    flask_info = client.get("/model-info", headers=HEADERS).get_json()
+    info = bento.model_info()
+    for key in ("algorithm", "threshold", "model_sha256", "raw_data_md5"):
+        assert info[key] == flask_info[key]

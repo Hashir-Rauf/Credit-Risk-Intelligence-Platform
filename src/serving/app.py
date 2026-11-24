@@ -151,6 +151,7 @@ def create_app(
             415: "unsupported_media_type",
         }
         messages = {
+            400: "the request body is not valid JSON",
             413: f"request body is larger than {settings.max_body_bytes} bytes",
             415: 'send the body as JSON with "Content-Type: application/json"',
         }

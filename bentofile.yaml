@@ -1,0 +1,28 @@
+# Build a Bento from the champion model:   bentoml build -f bentofile.yaml
+# Run it:                                    bentoml serve credit_risk:latest
+# Containerise it:                           bentoml containerize credit_risk:latest
+#
+# Needs models/model.joblib and models/explainer_background.parquet locally (`dvc pull -r dagshub`).
+# How this relates to the Flask API: see docs/serving.md.
+service: "src.serving.bento_service:CreditRisk"
+labels:
+  owner: hashir-rauf
+  project: credit-risk-intelligence-platform
+  note: educational-model-not-a-lending-tool
+include:
+  - "src/**/*.py"
+  - "params.yaml"
+  - "dvc.lock"
+  - "reports/feature_schema.json"
+  - "reports/metrics.json"
+  - "reports/evaluation.json"
+  - "models/model.joblib"
+  - "models/explainer_background.parquet"
+exclude:
+  - "**/__pycache__/**"
+python:
+  requirements_txt: "./requirements-serve.txt"
+  lock_packages: true
+docker:
+  python_version: "3.11"
+  distro: debian
