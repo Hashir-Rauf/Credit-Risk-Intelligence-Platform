@@ -142,32 +142,32 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 4 — Serving, containers, frontend
-**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** S3 (API/Docker/BentoML), S1 (frontend). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.**
+**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** all **[H]** (CODEOWNERS: serving, docker, frontend are Hashir's; the model contract is **[J]**'s). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.** **Status 2026-11-24: built and verified locally; combined PR pending (CI on GitHub re-running).** Docs: `docs/serving.md`.
 
 **Steps (API, S3)**
-1. `src/serving/app.py` (Flask app factory), `schemas.py` (request validation), `model_loader.py` (load the registered model by alias from MLflow/S3 once at startup).
-2. Endpoints: `GET /health` (liveness plus model-loaded flag), `GET /model-info` (version, run ID, metrics, trained-at, data version, git SHA), `POST /predict` (single and batch; returns probability, label, threshold, model_version, request_id).
-3. Error handling: 400 malformed JSON, 422 schema/range errors, 413 oversize, 500 safe message with no stack trace; API-key check via header.
-4. `src/monitoring/metrics.py`: Prometheus counters/histograms and `/metrics`. Structured JSON logs with no raw inputs.
-5. `tests/test_api.py`: valid, missing field, wrong type, out-of-range, empty body, oversize, bad key, `/model-info` contents.
-6. `docker/Dockerfile.api`: slim base, multi-stage, non-root, gunicorn, `HEALTHCHECK`, no secrets/data. `.dockerignore`.
-7. `docker-compose.yml` + `docker-compose.dev.yml` / `docker-compose.prod.yml`: api, mlflow, postgres, prometheus, grafana.
-8. BentoML: `bentofile.yaml`, build a Bento from the registered model; document its role (packaging/alt serving path) and run it once.
-9. **Cross-machine test:** teammate runs `docker compose up` on another laptop from the README only; record the result.
+1. **[H] ✅** `src/serving/app.py` (Flask app factory), `schemas.py` (request validation), `model_loader.py` (load the registered model by alias from MLflow/S3 once at startup).
+2. **[H] ✅** Endpoints (+ `POST /explain`; returns `risk_score`, not `probability`, because the model is uncalibrated, see `docs/reviews/phase-2-review.md`): `GET /health` (liveness plus model-loaded flag), `GET /model-info` (version, run ID, metrics, trained-at, data version, git SHA), `POST /predict` (single and batch; returns probability, label, threshold, model_version, request_id).
+3. **[H] ✅** Error handling (also 401, 404/405, 415, 503; every error is JSON with a request id): 400 malformed JSON, 422 schema/range errors, 413 oversize, 500 safe message with no stack trace; API-key check via header.
+4. **[H] ✅** `src/monitoring/metrics.py`: Prometheus counters/histograms and `/metrics`. Structured JSON logs with no raw inputs.
+5. **[H] ✅** `tests/test_api.py` (67 tests incl. log/metric hygiene and Bento parity): valid, missing field, wrong type, out-of-range, empty body, oversize, bad key, `/model-info` contents.
+6. **[H] ✅** `docker/Dockerfile.api` (multi-stage, uid 10001, healthcheck; slim 37-package install from the lock as constraints; `with-model` target for deployment): slim base, multi-stage, non-root, gunicorn, `HEALTHCHECK`, no secrets/data. `.dockerignore`.
+7. **[H] ✅** `docker-compose.yml` + `docker-compose.dev.yml` / `docker-compose.prod.yml`: api, mlflow, postgres, prometheus, grafana.
+8. **[H] ✅** BentoML (built, served once, full test split scores ROC-AUC 0.7883 through it; `docs/evidence/phase-4/bento_run.txt`): `bentofile.yaml`, build a Bento from the registered model; document its role (packaging/alt serving path) and run it once.
+9. **[H] ⬜ needs a teammate:** **Cross-machine test:** teammate runs `docker compose up` on another laptop from the README only; record the result.
 
 **Steps (frontend, S1; start once the API schema is frozen)**
-10. Next.js app (App Router, TypeScript), `app/api/predict` and `app/api/model-info` route handlers adding the API key server-side.
-11. Pages: Score applicant (form, presets, gauge, risk band, SHAP factors), Model & data, Monitoring links, Admin (champion vs. challenger, promote/rollback trigger).
-12. `frontend/Dockerfile` (standalone output, non-root); add to Compose; Playwright smoke test; add the Node job to CI.
+10. **[H] ✅** Next.js app (App Router, TypeScript), `app/api/predict` and `app/api/model-info` route handlers adding the API key server-side.
+11. **[H] ✅** Pages (Admin promote/rollback is shown disabled until Phase 8): Score applicant (form, presets, gauge, risk band, SHAP factors), Model & data, Monitoring links, Admin (champion vs. challenger, promote/rollback trigger).
+12. **[H] ✅** `frontend/Dockerfile` (standalone output, non-root); add to Compose; Playwright smoke test; add the Node job to CI.
 
 **Deliverables:** Flask API, tests, Dockerfile, Compose stack, Bento, Next.js UI.
 **Exit criteria**
-- [ ] `docker compose up` brings up the full stack; `curl` examples in the README work.
-- [ ] All API tests pass in CI; image passes Trivy (no unaccepted high/critical).
+- [x] `docker compose up` brings up the full stack (6 services healthy, `docs/evidence/phase-4/stack_check.txt`); `curl` transcript in `docs/evidence/phase-4/curl_transcript.txt`.
+- [ ] All API tests pass in CI; image passes Trivy (no unaccepted high/critical). *(tests pass locally in the full and the slim 37-package environments; CI run in progress, see the PR)*
 - [ ] Verified on a second machine.
-- [ ] UI scores a customer end to end; the API key is not visible in the browser dev tools.
+- [x] UI scores a customer end to end; the API key is not visible in the browser (Playwright test, plus a mutation check proving the assertion can fail).
 
-**Evidence:** curl transcript (valid and malformed), `/model-info` JSON, second-machine recording, UI screenshots.
+**Evidence:** `docs/evidence/phase-4/README.md` (curl transcript, full-stack check, Bento run, 9 UI screenshots). Second-machine recording: pending a teammate.
 
 ---
 

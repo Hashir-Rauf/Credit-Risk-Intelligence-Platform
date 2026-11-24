@@ -4,7 +4,7 @@
 
 End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project (3 students).
 
-> Status: Phase 1 done; Phase 2 code complete (features, tuning, MLflow, registry, Feast, fairness, explanations, drift simulation); real-data results and docs pending. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
+> Status: Phases 0-3 done (data, DVC, model, CI); Phase 4 built (Flask API, Docker, compose stack, BentoML, Next.js UI), review in progress. Next: AWS deployment, orchestration, Kubernetes, monitoring. See [plan.md](plan.md), [phases.md](phases.md), [rules.md](rules.md).
 
 ## Dataset
 UCI *Default of Credit Card Clients* (30,000 rows, 23 features). Source: https://archive.ics.uci.edu/dataset/350. Used for coursework only; not a real lending decision tool.
@@ -43,7 +43,21 @@ python -m src.models.registry   # register the evaluated model as `challenger`
 python -m src.models.promote    # challenger -> champion if it wins (exit 3 if not)
 mlflow ui --backend-store-uri sqlite:///mlflow.db   # browse runs
 ```
-Later phases add: `make up`, deployment and teardown instructions.
+### Run the whole stack (API, UI, MLflow, Prometheus, Grafana)
+```bash
+cp .env.example .env                       # set API_KEY (16+ chars), POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD
+dvc pull -r dagshub                        # model files into models/
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+UI http://localhost:3000 · API http://localhost:8000 (`/health`, `/model-info`, `/predict`, `/explain`) · Grafana :3001 ·
+MLflow :5000 · Prometheus :9090. Example call:
+```bash
+curl -s -X POST http://localhost:8000/predict -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" -d @one_customer.json
+```
+Details, error codes and the BentoML path: [docs/serving.md](docs/serving.md). Evidence: [docs/evidence/phase-4/](docs/evidence/phase-4/README.md).
+The score returned is a **risk score, not a calibrated probability**; this is a coursework model, not a lending tool.
+
+Later phases add: AWS deployment and teardown instructions.
 
 ## Repository layout
 See [plan.md](plan.md) section 4.
