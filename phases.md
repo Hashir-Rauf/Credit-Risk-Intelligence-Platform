@@ -142,7 +142,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 4 — Serving, containers, frontend
-**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** all **[H]** (CODEOWNERS: serving, docker, frontend are Hashir's; the model contract is **[J]**'s). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.** **Status 2026-11-24: built and verified locally; combined PR pending (CI on GitHub re-running).** Docs: `docs/serving.md`.
+**Goal:** the model behind a validated REST API, containerised, with a UI. **Owners:** all **[H]** (CODEOWNERS: serving, docker, frontend are Hashir's; the model contract is **[J]**'s). **Prereq:** Phases 2, 3. **Milestone M1 is reached here.** **Status 2026-11-24: built, verified locally and green in CI; combined PR ready to open.** Docs: `docs/serving.md`.
 
 **Steps (API, S3)**
 1. **[H] ✅** `src/serving/app.py` (Flask app factory), `schemas.py` (request validation), `model_loader.py` (load the registered model by alias from MLflow/S3 once at startup).
@@ -163,7 +163,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 **Deliverables:** Flask API, tests, Dockerfile, Compose stack, Bento, Next.js UI.
 **Exit criteria**
 - [x] `docker compose up` brings up the full stack (6 services healthy, `docs/evidence/phase-4/stack_check.txt`); `curl` transcript in `docs/evidence/phase-4/curl_transcript.txt`.
-- [ ] All API tests pass in CI; image passes Trivy (no unaccepted high/critical). *(tests pass locally in the full and the slim 37-package environments; CI run in progress, see the PR)*
+- [x] All API tests pass in CI; both images pass Trivy with no unaccepted high/critical (CI run 45317211962, all jobs green).
 - [ ] Verified on a second machine.
 - [x] UI scores a customer end to end; the API key is not visible in the browser (Playwright test, plus a mutation check proving the assertion can fail).
 

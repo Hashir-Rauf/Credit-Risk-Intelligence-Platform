@@ -11,8 +11,9 @@ It runs on every push to any branch, every pull request, and on demand (Actions 
 | Tests | full `pytest` suite, parallel (`-n auto --dist loadfile`, one worker per module so expensive fixtures are built once), with coverage (`pyproject.toml`: `fail_under = 70`) | a test fails or coverage drops under 70% |
 | Security | `bandit -r src -ll`, `pip-audit` on `requirements.lock.txt` | a medium+ bandit finding, or a known CVE not listed in `docs/security.md` |
 | Secret scan | gitleaks over the **full git history** | a credential-shaped string is found anywhere in history |
-| Docker | builds `docker/Dockerfile.api`, scans the image with Trivy | HIGH/CRITICAL findings with a fix available. Skipped until the Dockerfile exists (Phase 4) |
-| **CI passed** | aggregate of the five jobs above | any of them did not succeed |
+| Docker | builds the API and frontend images, **boots the API container without a model** and checks it answers 503, enforces the API key (401) and runs as uid 10001, then Trivy-scans both images | the smoke test fails, or HIGH/CRITICAL findings with a fix available (vulnerabilities and embedded secrets) |
+| Frontend | `npm ci`, ESLint, type-check, unit tests, production build, a Playwright browser smoke test against a mock API (proves the API key never reaches the browser), `npm audit` | any step fails, or a high-severity advisory in production dependencies |
+| **CI passed** | aggregate of the six jobs above | any of them did not succeed |
 
 `CI passed` is the one status to mark **required** on `main` (see below).
 
