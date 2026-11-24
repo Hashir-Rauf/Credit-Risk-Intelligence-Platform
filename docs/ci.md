@@ -8,7 +8,7 @@ It runs on every push to any branch, every pull request, and on demand (Actions 
 | Job | What it checks | Fails the build when |
 |---|---|---|
 | Lint | `ruff check .`, `black --check .` | any lint or formatting issue |
-| Tests | full `pytest` suite with coverage (`pyproject.toml`: `fail_under = 70`) | a test fails or coverage drops under 70% |
+| Tests | full `pytest` suite, parallel (`-n auto --dist loadfile`, one worker per module so expensive fixtures are built once), with coverage (`pyproject.toml`: `fail_under = 70`) | a test fails or coverage drops under 70% |
 | Security | `bandit -r src -ll`, `pip-audit` on `requirements.lock.txt` | a medium+ bandit finding, or a known CVE not listed in `docs/security.md` |
 | Secret scan | gitleaks over the **full git history** | a credential-shaped string is found anywhere in history |
 | Docker | builds `docker/Dockerfile.api`, scans the image with Trivy | HIGH/CRITICAL findings with a fix available. Skipped until the Dockerfile exists (Phase 4) |
@@ -16,7 +16,7 @@ It runs on every push to any branch, every pull request, and on demand (Actions 
 
 `CI passed` is the one status to mark **required** on `main` (see below).
 
-Measured: the first run on GitHub took **7.5 minutes** end to end (tests 7.3 min, everything else about 1 minute each),
+Measured: serial, the suite grew from 7 to 11.6 minutes as phases landed; in parallel it takes about 5 minutes locally. The first run on GitHub took **7.5 minutes** end to end (tests 7.3 min, everything else about 1 minute each),
 inside the 10 minute target. Evidence: [`docs/evidence/phase-3/`](evidence/phase-3/README.md).
 
 ## Reproducibility of the CI environment

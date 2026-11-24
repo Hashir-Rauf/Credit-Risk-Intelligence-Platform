@@ -58,10 +58,10 @@ jobs:
             requirements-ci.txt
       - name: Install locked dependencies
         run: pip install -r requirements.lock.txt -r requirements-ci.txt
-      - name: Run tests (fails under the coverage minimum in pyproject.toml)
+      - name: Run tests in parallel, one worker per test module (fails under the coverage minimum in pyproject.toml)
         run: >
-          pytest -p no:cacheprovider --cov --cov-report=term-missing --cov-report=xml
-          --junitxml=junit.xml
+          pytest -p no:cacheprovider -n auto --dist loadfile --cov --cov-report=term-missing
+          --cov-report=xml --junitxml=junit.xml
       - name: Upload test and coverage reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

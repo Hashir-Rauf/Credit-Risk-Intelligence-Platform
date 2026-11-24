@@ -21,6 +21,10 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 WORKDIR /app
 RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app -h /app app
+# The running server needs `node` only. npm and corepack (and the packages bundled inside them) are flagged by Trivy
+# (brace-expansion, ip-address, pacote), so remove them instead of ignoring the findings.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn*
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/public ./public

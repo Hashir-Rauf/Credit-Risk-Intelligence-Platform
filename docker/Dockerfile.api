@@ -11,7 +11,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /build
 COPY requirements.lock.txt requirements-serve.txt ./
 # The lock file pins every transitive version; only the serving packages are actually installed.
-RUN pip install -c requirements.lock.txt -r requirements-serve.txt
+RUN pip install -c requirements.lock.txt -r requirements-serve.txt \
+ && pip uninstall -y setuptools wheel
 
 
 FROM python:3.11-slim-bookworm AS base
@@ -29,6 +30,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
 # Non-root user with a fixed uid so Kubernetes can enforce runAsNonRoot.
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
+
+# Build tools the running service never uses. The base image ships `wheel` and a setuptools that vendors
+# `jaraco.context`; Trivy flags both (CVE-2026-24049, CVE-2026-23949). Remove them rather than ignore the findings.
+RUN /usr/local/bin/python -m pip uninstall -y setuptools wheel
 
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv

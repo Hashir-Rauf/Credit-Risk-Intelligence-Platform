@@ -2,6 +2,8 @@
 # Bump deliberately: change here, run `make lint test` locally, open a PR.
 pytest==9.2.0
 pytest-cov==7.1.0
+pytest-xdist==3.8.0
+execnet==2.1.2
 ruff==0.17.5
 black==26.10.1
 bandit==1.9.4
