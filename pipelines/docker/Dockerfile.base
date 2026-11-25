@@ -1,0 +1,18 @@
+FROM python:3.11-slim-bookworm AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential git && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+COPY requirements.lock.txt /tmp/requirements.lock.txt
+RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.lock.txt && /opt/venv/bin/pip check
+
+FROM python:3.11-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends git libgomp1 && rm -rf /var/lib/apt/lists/* && useradd --create-home trainer
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app
+COPY src ./src
+COPY configs ./configs
+COPY feature_repo ./feature_repo
+COPY params.yaml dvc.lock ./
+RUN mkdir -p data models reports && chown trainer:trainer /app data models reports
+USER trainer
+CMD ["python","-m","src.data.synthetic","--smoke"]

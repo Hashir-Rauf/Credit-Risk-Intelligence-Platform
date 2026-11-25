@@ -1,0 +1,12 @@
+**
+!requirements.lock.txt
+!params.yaml
+!dvc.lock
+!src/
+!src/**
+!configs/
+!configs/**
+!feature_repo/
+!feature_repo/**
+**/__pycache__/
+**/*.pyc

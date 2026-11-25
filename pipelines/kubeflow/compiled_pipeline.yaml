@@ -1,0 +1,342 @@
+# PIPELINE DEFINITION
+# Name: credit-risk-phase5
+# Description: Validated snapshot to a gated staging model
+# Inputs:
+#    git_sha: str
+#    request: str
+#    snapshot: str
+#    strict_gate: int [Default: 0.0]
+components:
+  comp-condition-1:
+    dag:
+      tasks:
+        package-register:
+          cachingOptions: {}
+          componentRef:
+            name: comp-package-register
+          inputs:
+            artifacts:
+              metrics:
+                componentInputArtifact: pipelinechannel--evaluate-metrics
+              model:
+                componentInputArtifact: pipelinechannel--train-tune-model
+          taskInfo:
+            name: package-register
+    inputDefinitions:
+      artifacts:
+        pipelinechannel--evaluate-metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        pipelinechannel--train-tune-model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        pipelinechannel--evaluate-passed:
+          parameterType: BOOLEAN
+  comp-evaluate:
+    executorLabel: exec-evaluate
+    inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        request:
+          parameterType: STRING
+        strict_gate:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+      parameters:
+        passed:
+          parameterType: BOOLEAN
+  comp-package-register:
+    executorLabel: exec-package-register
+    inputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        registration:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-preprocess:
+    executorLabel: exec-preprocess
+    inputDefinitions:
+      parameters:
+        snapshot:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-tune:
+    executorLabel: exec-train-tune
+    inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        git_sha:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-evaluate:
+      container:
+        args:
+        - evaluate
+        - --dataset
+        - '{{$.inputs.artifacts[''dataset''].path}}'
+        - --model
+        - '{{$.inputs.artifacts[''model''].path}}'
+        - --request
+        - '{{$.inputs.parameters[''request'']}}'
+        - --strict-gate
+        - '{{$.inputs.parameters[''strict_gate'']}}'
+        - --output
+        - '{{$.outputs.artifacts[''metrics''].path}}'
+        - --passed
+        - '{{$.outputs.parameters[''passed''].output_file}}'
+        - --metrics-uri
+        - '{{$.outputs.artifacts[''metrics''].uri}}'
+        - --executor-output
+        - '{{$.outputs.output_file}}'
+        command:
+        - python
+        - -m
+        - pipelines.phase5.runtime
+        image: credit-risk-phase5:local
+    exec-package-register:
+      container:
+        args:
+        - register
+        - --model
+        - '{{$.inputs.artifacts[''model''].path}}'
+        - --metrics
+        - '{{$.inputs.artifacts[''metrics''].path}}'
+        - --output
+        - '{{$.outputs.artifacts[''registration''].path}}'
+        command:
+        - python
+        - -m
+        - pipelines.phase5.runtime
+        image: credit-risk-phase5:local
+    exec-preprocess:
+      container:
+        args:
+        - preprocess
+        - --snapshot
+        - '{{$.inputs.parameters[''snapshot'']}}'
+        - --output
+        - '{{$.outputs.artifacts[''dataset''].path}}'
+        command:
+        - python
+        - -m
+        - pipelines.phase5.runtime
+        image: credit-risk-phase5:local
+    exec-train-tune:
+      container:
+        args:
+        - train
+        - --dataset
+        - '{{$.inputs.artifacts[''dataset''].path}}'
+        - --git-sha
+        - '{{$.inputs.parameters[''git_sha'']}}'
+        - --output
+        - '{{$.outputs.artifacts[''model''].path}}'
+        command:
+        - python
+        - -m
+        - pipelines.phase5.runtime
+        image: credit-risk-phase5:local
+pipelineInfo:
+  description: Validated snapshot to a gated staging model
+  name: credit-risk-phase5
+root:
+  dag:
+    tasks:
+      condition-1:
+        componentRef:
+          name: comp-condition-1
+        dependentTasks:
+        - evaluate
+        - train-tune
+        inputs:
+          artifacts:
+            pipelinechannel--evaluate-metrics:
+              taskOutputArtifact:
+                outputArtifactKey: metrics
+                producerTask: evaluate
+            pipelinechannel--train-tune-model:
+              taskOutputArtifact:
+                outputArtifactKey: model
+                producerTask: train-tune
+          parameters:
+            pipelinechannel--evaluate-passed:
+              taskOutputParameter:
+                outputParameterKey: passed
+                producerTask: evaluate
+        taskInfo:
+          name: quality-gate-passed
+        triggerPolicy:
+          condition: inputs.parameter_values['pipelinechannel--evaluate-passed'] ==
+            true
+      evaluate:
+        cachingOptions: {}
+        componentRef:
+          name: comp-evaluate
+        dependentTasks:
+        - preprocess
+        - train-tune
+        inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: dataset
+                producerTask: preprocess
+            model:
+              taskOutputArtifact:
+                outputArtifactKey: model
+                producerTask: train-tune
+          parameters:
+            request:
+              componentInputParameter: request
+            strict_gate:
+              componentInputParameter: strict_gate
+        taskInfo:
+          name: evaluate
+      preprocess:
+        cachingOptions: {}
+        componentRef:
+          name: comp-preprocess
+        inputs:
+          parameters:
+            snapshot:
+              componentInputParameter: snapshot
+        taskInfo:
+          name: preprocess
+      train-tune:
+        cachingOptions: {}
+        componentRef:
+          name: comp-train-tune
+        dependentTasks:
+        - preprocess
+        inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: dataset
+                producerTask: preprocess
+          parameters:
+            git_sha:
+              componentInputParameter: git_sha
+        taskInfo:
+          name: train-tune
+  inputDefinitions:
+    parameters:
+      git_sha:
+        parameterType: STRING
+      request:
+        parameterType: STRING
+      snapshot:
+        parameterType: STRING
+      strict_gate:
+        defaultValue: 0.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.18.2
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-evaluate:
+          imagePullPolicy: IfNotPresent
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: MLFLOW_TRACKING_URI
+              secretKey: MLFLOW_TRACKING_URI
+            - envVar: MLFLOW_TRACKING_USERNAME
+              secretKey: MLFLOW_TRACKING_USERNAME
+            - envVar: MLFLOW_TRACKING_PASSWORD
+              secretKey: MLFLOW_TRACKING_PASSWORD
+            optional: false
+            secretName: credit-risk-phase5
+            secretNameParameter:
+              runtimeValue:
+                constant: credit-risk-phase5
+        exec-package-register:
+          imagePullPolicy: IfNotPresent
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: MLFLOW_TRACKING_URI
+              secretKey: MLFLOW_TRACKING_URI
+            - envVar: MLFLOW_TRACKING_USERNAME
+              secretKey: MLFLOW_TRACKING_USERNAME
+            - envVar: MLFLOW_TRACKING_PASSWORD
+              secretKey: MLFLOW_TRACKING_PASSWORD
+            optional: false
+            secretName: credit-risk-phase5
+            secretNameParameter:
+              runtimeValue:
+                constant: credit-risk-phase5
+        exec-preprocess:
+          imagePullPolicy: IfNotPresent
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: PHASE5_DVC_URL
+              secretKey: PHASE5_DVC_URL
+            - envVar: PHASE5_DVC_USER
+              secretKey: PHASE5_DVC_USER
+            - envVar: PHASE5_DVC_PASSWORD
+              secretKey: PHASE5_DVC_PASSWORD
+            optional: false
+            secretName: credit-risk-phase5
+            secretNameParameter:
+              runtimeValue:
+                constant: credit-risk-phase5
+        exec-train-tune:
+          imagePullPolicy: IfNotPresent
+          secretAsEnv:
+          - keyToEnv:
+            - envVar: MLFLOW_TRACKING_URI
+              secretKey: MLFLOW_TRACKING_URI
+            - envVar: MLFLOW_TRACKING_USERNAME
+              secretKey: MLFLOW_TRACKING_USERNAME
+            - envVar: MLFLOW_TRACKING_PASSWORD
+              secretKey: MLFLOW_TRACKING_PASSWORD
+            optional: false
+            secretName: credit-risk-phase5
+            secretNameParameter:
+              runtimeValue:
+                constant: credit-risk-phase5

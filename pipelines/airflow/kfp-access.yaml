@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: phase5-airflow-kfp
+  namespace: kubeflow
+spec:
+  type: NodePort
+  selector:
+    app: ml-pipeline-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      nodePort: 30885

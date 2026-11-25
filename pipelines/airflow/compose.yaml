@@ -1,0 +1,40 @@
+name: credit-risk-phase5
+services:
+  airflow:
+    image: credit-risk-airflow:phase5
+    command: standalone
+    ports:
+      - "127.0.0.1:8085:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/state/airflow.db
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+      AIRFLOW_HOME: /opt/airflow/state
+      PHASE5_KFP_HOST: http://minikube:30885
+      DVC_NO_ANALYTICS: "true"
+      PHASE5_DVC_URL: ${PHASE5_DVC_URL:?Set the DVC remote URL}
+      PHASE5_DVC_USER: ${PHASE5_DVC_USER:?Set the DVC user}
+      PHASE5_DVC_PASSWORD: ${PHASE5_DVC_PASSWORD:?Set the DVC token}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:?Set an MLflow server URI}
+      MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME:?Set the MLflow user}
+      MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD:?Set the MLflow token}
+      PHASE5_NOTIFY_WEBHOOK: ${PHASE5_NOTIFY_WEBHOOK:-}
+      PHASE5_SOURCE_S3: ${PHASE5_SOURCE_S3:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+    volumes:
+      - state:/opt/airflow/state
+      - work:/opt/airflow/phase5-work
+    networks: [minikube]
+volumes:
+  state:
+  work:
+networks:
+  minikube:
+    external: true
+    name: minikube
