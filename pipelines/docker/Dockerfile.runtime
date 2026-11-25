@@ -1,0 +1,13 @@
+FROM alpine:3.22 AS installer
+RUN apk add --no-cache build-base
+COPY pipelines/docker/install-model.c /tmp/install-model.c
+RUN cc -Wall -Werror -static -Os -s /tmp/install-model.c -o /install-credit-model
+
+FROM credit-risk-ml:phase5
+WORKDIR /app
+COPY --from=installer /install-credit-model /usr/local/bin/install-credit-model
+COPY pipelines/__init__.py /app/pipelines/__init__.py
+COPY pipelines/phase5/ /app/pipelines/phase5/
+ENV DVC_NO_ANALYTICS=true MLFLOW_DISABLE_TELEMETRY=true
+COPY scripts/phase5-local-smoke.py /app/scripts/phase5-local-smoke.py
+COPY tests/fixtures/credit_corrupt.csv /app/tests/fixtures/credit_corrupt.csv

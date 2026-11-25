@@ -1,0 +1,21 @@
+FROM python:3.11-slim-bookworm AS compiler
+COPY pipelines/kubeflow/requirements.txt /tmp/kfp.txt
+RUN python -m venv /opt/kfp && /opt/kfp/bin/pip install --no-cache-dir -r /tmp/kfp.txt
+
+FROM credit-risk-phase5:local AS ml
+FROM apache/airflow:2.10.5-python3.11
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends git libgomp1 && rm -rf /var/lib/apt/lists/*
+COPY --from=ml /opt/venv /opt/venv
+COPY --from=ml /app /app
+COPY --from=compiler /opt/kfp /opt/kfp
+COPY pipelines/kubeflow /app/pipelines/kubeflow
+COPY tests/fixtures/credit_corrupt.csv /app/tests/fixtures/credit_corrupt.csv
+COPY pipelines/airflow/dags /opt/airflow/dags
+ARG COMPONENT_IMAGE=credit-risk-phase5:local
+ARG SOURCE_REVISION=archive
+ENV PHASE5_BUILD_GIT_SHA=$SOURCE_REVISION
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION phase5.component=$COMPONENT_IMAGE
+RUN cd /app && PHASE5_COMPONENT_IMAGE="$COMPONENT_IMAGE" /opt/kfp/bin/python -m pipelines.kubeflow.pipeline_definition
+RUN mkdir -p /opt/airflow/state /opt/airflow/phase5-work && chown airflow:root /opt/airflow/state /opt/airflow/phase5-work
+USER airflow
