@@ -42,6 +42,20 @@ Resources:
         LifecyclePolicyText: >-
           {"rules":[{"rulePriority":1,"description":"keep the 20 most recent images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":20},"action":{"type":"expire"}}]}
 
+  FrontendRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: credit-risk-frontend
+      ImageTagMutability: IMMUTABLE
+      EmptyOnDelete: true
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"keep the 10 most recent images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}
+
   ArtifactBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -156,6 +170,14 @@ Outputs:
     Value: !GetAtt Repository.Arn
     Export:
       Name: credit-risk-bootstrap-RepositoryArn
+  FrontendRepositoryUri:
+    Value: !GetAtt FrontendRepository.RepositoryUri
+    Export:
+      Name: credit-risk-bootstrap-FrontendRepositoryUri
+  FrontendRepositoryArn:
+    Value: !GetAtt FrontendRepository.Arn
+    Export:
+      Name: credit-risk-bootstrap-FrontendRepositoryArn
   ArtifactBucketName:
     Value: !Ref ArtifactBucket
     Export:

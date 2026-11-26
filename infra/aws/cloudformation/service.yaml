@@ -60,6 +60,11 @@ Resources:
           ToPort: 8000
           CidrIp: !Ref AllowedCidr
           Description: Operator range (the deploy workflow adds and removes the runner address for its smoke test)
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: !Ref AllowedCidr
+          Description: Web frontend, same operator range only (it holds the API key server-side, so it is never public)
 
   # ---------------------------------------------------------------- roles
   ExecutionRole:
@@ -99,6 +104,20 @@ Resources:
                 Resource:
                   - !ImportValue credit-risk-bootstrap-ApiKeySecretArn
                   - !ImportValue credit-risk-bootstrap-PredictionLogSaltSecretArn
+
+  # Kept apart from ExecutionRole on purpose: editing that role would make CloudFormation flag the task definition
+  # and the running service as "possibly changed" (they reference its ARN).
+  FrontendImagePull:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: pull-the-frontend-image
+      Roles: [!Ref ExecutionRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer, ecr:BatchCheckLayerAvailability]
+            Resource: !ImportValue credit-risk-bootstrap-FrontendRepositoryArn
 
   TaskRole:
     Type: AWS::IAM::Role
@@ -273,7 +292,9 @@ Resources:
                   - ecr:GetDownloadUrlForLayer
                   - ecr:DescribeImages
                   - ecr:DescribeImageScanFindings
-                Resource: !ImportValue credit-risk-bootstrap-RepositoryArn
+                Resource:
+                  - !ImportValue credit-risk-bootstrap-RepositoryArn
+                  - !ImportValue credit-risk-bootstrap-FrontendRepositoryArn
               - Sid: TaskDefinitionsHaveNoResourceLevelPermissions
                 Effect: Allow
                 Action: [ecs:RegisterTaskDefinition, ecs:DescribeTaskDefinition, ecs:ListTaskDefinitions]

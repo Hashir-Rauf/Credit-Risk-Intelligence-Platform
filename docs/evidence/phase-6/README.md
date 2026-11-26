@@ -20,6 +20,8 @@ Problems the live run found, all fixed through PRs: the OIDC subject now carries
 form: `AccessDenied` until fixed, found by reading the subject in CloudTrail); the DVC S3 remote was missing the two model objects (pushed);
 the deploy role has no `ecr:ListImages` (the step now uses `DescribeImages`); the operator scripts were not marked executable in git.
 
+**Frontend (2026-11-27):** deployed as a second container of the task (revision `credit-risk-api:4`, 0.5 vCPU / 1 GB) with an own ECR repository. Smoke test passed including the frontend check; from outside: `GET /` 200 (title "Credit Risk Intelligence Platform", scoring form rendered), `GET /api/health` `{"frontend":"ok","api":"ok","api_status":200}`, `POST /api/predict` through the frontend returned a score without any key from the client. The first attempt (revision 3) rolled back automatically because the smoke script needed `python3`, which the local machine lacks; it now uses `jq`. The service stack change set was previewed first and contained no task definition or service change.
+
 Still to demonstrate: rollback run, a failed gate or failed smoke test not deploying, alarm firing, Cost Explorer, teardown.
 
 Static checks done before the live run:

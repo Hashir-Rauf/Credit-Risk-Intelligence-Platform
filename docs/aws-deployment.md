@@ -54,6 +54,15 @@ GitHub now puts the numeric owner and repository IDs into the subject (`repo:Has
 Jobs that run in a GitHub Environment present the *environment* as their subject, not a branch. So the branch restriction is enforced on the
 Environment itself (below): a job can only run in `production` if the workflow ran from `main`.
 
+## Web frontend on AWS
+The Next.js frontend runs as a **second, non-essential container in the same ECS task** as the API (task size 0.5 vCPU / 1 GB), so there is one task, one public IP and no load balancer.
+* The browser talks only to the frontend (port 3000). Its server side calls the API on `127.0.0.1:8000` inside the task and attaches the API key from the same Secrets Manager secret; the key never reaches the browser.
+* Port 3000 is open to the **same single operator CIDR** as the API. The frontend holds the API key, so it must never be opened to `0.0.0.0/0`.
+* Image: its own ECR repository `credit-risk-frontend` (immutable tags, created by the bootstrap stack). The Deploy workflow builds, Trivy-scans and pushes it next to the API image and `scripts/aws_ecs_deploy.sh` adds the `frontend` container when it registers the new task revision; the smoke test also checks the frontend (`/api/health` must see the API, `/` must render the form).
+* The container is non-essential: if it crashes, the scoring API keeps running (ECS restarts it).
+* `infra/aws/endpoint.sh` prints the API URL on the first line and the frontend URL on stderr.
+* The placeholder task definition in `service.yaml` is deliberately unchanged (editing it would reset the service); the frontend container exists only in the revisions that the deploy script registers.
+
 ## Risk to confirm first: the GitHub OIDC provider may be blocked
 `memory.md` ("AWS findings, 2026-11-08") records that a service control policy **explicitly denies `iam:ListOpenIDConnectProviders`**, so creating the GitHub OIDC provider is probably blocked too. It has not been tried (nothing creates cloud resources without your go-ahead). `service.yaml` creates the provider; if that fails, the stack rolls back cleanly and nothing is left behind.
 Options if it is blocked: (1) ask the AWS project owner to allow `iam:CreateOpenIDConnectProvider` for `token.actions.githubusercontent.com`; if the provider exists already, run with `CREATE_OIDC_PROVIDER=false` and pass its ARN as `ExistingOidcProviderArn`; (2) deploy with a short-lived key a person creates by hand for the demo (this breaks the "no stored AWS keys" exit criterion, so it needs the instructor's agreement). Do not store a long-lived key in GitHub to make this pass.
