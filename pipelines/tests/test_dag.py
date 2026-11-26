@@ -89,6 +89,15 @@ def test_validation_failure_fails_the_task_without_retrying():
         module.execute("python", "pipelines.phase5.airflow_data", "validate", "work", "corrupt")
 
 
+def test_gate_rejection_fails_the_task_without_retrying():
+    rejected = _helper_result(3, stderr="GateRejected: Quality gate rejected training run abc")
+    with (
+        patch.object(module.subprocess, "run", return_value=rejected),
+        pytest.raises(AirflowFailException, match="quality gate rejected; not retrying"),
+    ):
+        module.execute("python", "pipelines.phase5.airflow_data", "gate", "work", "uci")
+
+
 def test_other_failures_are_still_retryable():
     failed = _helper_result(1, stderr="network")
     with (

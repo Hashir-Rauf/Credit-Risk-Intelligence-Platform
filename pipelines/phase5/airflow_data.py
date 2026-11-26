@@ -16,7 +16,8 @@ from src.data import ingestion, synthetic, validation
 
 from pipelines.phase5.snapshot import publish
 
-VALIDATION_FAILED = 2  # exit code shared with the S1 stage CLIs and the DAG
+VALIDATION_FAILED = 2  # exit codes shared with the S1 stage CLIs and the DAG
+GATE_REJECTED = 3
 
 
 def fetch(work, mode):
@@ -79,9 +80,14 @@ def main():
         descriptor = publish(work / "raw.csv", work / "validation.json", args.mode)
         (work / "snapshot.json").write_text(json.dumps(descriptor))
     else:
-        from pipelines.phase5.result import check_result
+        from pipelines.phase5.result import GateRejected, check_result
 
-        check_result(work.name, args.mode == "synthetic")
+        try:
+            check_result(work.name, args.mode == "synthetic")
+        except GateRejected as error:
+            # A rejected model is a decision, not a failure: exit 3 (gate_failed in the contract).
+            print(f"GateRejected: {error}", file=sys.stderr)
+            sys.exit(GATE_REJECTED)
 
 
 if __name__ == "__main__":

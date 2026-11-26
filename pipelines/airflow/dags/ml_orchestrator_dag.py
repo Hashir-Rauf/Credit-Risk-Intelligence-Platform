@@ -20,9 +20,8 @@ LOG = logging.getLogger(__name__)
 ROOT = Path("/app")
 ML = "/opt/venv/bin/python"
 SDK = "/opt/kfp/bin/python"
-VALIDATION_FAILED = (
-    2  # exit code of airflow_data when validation fails (shared with the src/ stages)
-)
+VALIDATION_FAILED = 2  # exit codes of airflow_data, shared with the src/ stages
+GATE_REJECTED = 3
 
 
 def emit(message):
@@ -67,10 +66,14 @@ def execute(python, module, *args):
     # Show the helper's own output in the task log (a failing helper's error used to be invisible).
     for line in (result.stdout + result.stderr).splitlines():
         LOG.info("[%s] %s", module.rsplit(".", 1)[-1], line)
-    if result.returncode == VALIDATION_FAILED:
-        # Bad data is deterministic: retrying cannot help, so fail now (later tasks stay
-        # upstream_failed).
-        raise AirflowFailException(f"{module} {args[0]}: data validation failed; not retrying")
+    if result.returncode in (VALIDATION_FAILED, GATE_REJECTED):
+        # Both are deterministic outcomes: retrying cannot change them, so fail now.
+        reason = (
+            "data validation failed"
+            if result.returncode == VALIDATION_FAILED
+            else "quality gate rejected"
+        )
+        raise AirflowFailException(f"{module} {args[0]}: {reason}; not retrying")
     result.check_returncode()
 
 
