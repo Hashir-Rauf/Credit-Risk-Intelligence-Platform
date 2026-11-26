@@ -1,0 +1,29 @@
+# First real-data acceptance run on a fresh cluster, 2026-11-25 (scheduled run scheduled__2026-11-15T00:00:00+00:00)
+# Airflow tasks: fetch_data, validate, dvc_push, trigger_kfp_run, poll_run all SUCCEEDED; check_gate FAILED on all 3 attempts.
+
+## Airflow task states
+  poll_run         success
+  fetch_data       success
+  validate         success
+  dvc_push         success
+  trigger_kfp_run  success
+  check_gate       failed
+  notify           upstream_failed
+
+## The real error, reproduced by running the check_gate subprocess by hand (Airflow's task log hid it)
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/pipelines/phase5/airflow_data.py", line 78, in <module>
+    main()
+  File "/app/pipelines/phase5/airflow_data.py", line 74, in main
+    check_result(work.name, args.mode == "synthetic")
+  File "/app/pipelines/phase5/result.py", line 20, in check_result
+    raise RuntimeError(f"Expected one evaluated training run, found {len(runs)}")
+RuntimeError: Expected one evaluated training run, found 2
+
+## MLflow runs carrying the same phase5_request tag (DagsHub, experiment credit-risk-default)
+runs carrying a phase5_request tag: 2
+ run edb2105b8dc6 | started 23:09:35 | status FINISHED | name: random_forest-seed42 | gate_passed: true | staging_version: 3 | request: 90db259ea0db
+ run 896114841435 | started 22:43:49 | status FINISHED | name: random_forest-seed42 | gate_passed: true | staging_version: 2 | request: 90db259ea0db
+
+## Diagnosis
+The request id is sha256(Airflow run_id). A SCHEDULED run id (scheduled__<date>) is identical on every Airflow installation, so JA-Codex's earlier run (17:43 UTC, staging v2) and this machine's run (18:09 UTC, staging v3) share one id in the shared MLflow. The gate check refuses to guess and fails: 'Expected one evaluated training run, found 2'. Manual runs have unique ids, so only scheduled or back-filled runs collide.

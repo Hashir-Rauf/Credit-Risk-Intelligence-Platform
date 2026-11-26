@@ -13,7 +13,8 @@ services:
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
       AIRFLOW_HOME: /opt/airflow/state
-      PHASE5_KFP_HOST: http://minikube:30885
+      # The cluster node container is named after the Minikube profile (default: minikube).
+      PHASE5_KFP_HOST: http://${PHASE5_PROFILE:-minikube}:30885
       DVC_NO_ANALYTICS: "true"
       PHASE5_DVC_URL: ${PHASE5_DVC_URL:?Set the DVC remote URL}
       PHASE5_DVC_USER: ${PHASE5_DVC_USER:?Set the DVC user}
@@ -30,11 +31,11 @@ services:
     volumes:
       - state:/opt/airflow/state
       - work:/opt/airflow/phase5-work
-    networks: [minikube]
+    networks: [cluster]
 volumes:
   state:
   work:
 networks:
-  minikube:
+  cluster:
     external: true
-    name: minikube
+    name: ${PHASE5_PROFILE:-minikube}

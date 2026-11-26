@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -14,6 +15,8 @@ from src.common.seed import derive_seed
 from src.data import ingestion, synthetic, validation
 
 from pipelines.phase5.snapshot import publish
+
+VALIDATION_FAILED = 2  # exit code shared with the S1 stage CLIs and the DAG
 
 
 def fetch(work, mode):
@@ -64,7 +67,14 @@ def main():
     if args.action == "fetch":
         fetch(work, args.mode)
     elif args.action == "validate":
-        validate(work)
+        try:
+            validate(work)
+        except validation.DataValidationError as error:
+            # Same exit code as the other stage CLIs (docs/contracts-s1.md). Bad data is
+            # deterministic, so the DAG fails this task without retrying. The text keeps the
+            # class name for log searches.
+            print(f"DataValidationError: {error}", file=sys.stderr)
+            sys.exit(VALIDATION_FAILED)
     elif args.action == "push":
         descriptor = publish(work / "raw.csv", work / "validation.json", args.mode)
         (work / "snapshot.json").write_text(json.dumps(descriptor))
