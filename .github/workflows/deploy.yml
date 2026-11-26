@@ -128,7 +128,8 @@ jobs:
         run: |
           aws ecr get-login-password | docker login --username AWS --password-stdin "${{ steps.meta.outputs.registry }}"
           docker push "${{ steps.meta.outputs.image }}"
-          aws ecr list-images --repository-name "$ECR_REPOSITORY" --query 'imageIds[].imageTag' --output text
+          # Confirm the exact tag exists (DescribeImages is allowed for the deploy role; ListImages is not).
+          aws ecr describe-images --repository-name "$ECR_REPOSITORY"             --image-ids imageTag="${{ steps.meta.outputs.sha }}" --query 'imageDetails[0].imageDigest' --output text
 
       - name: Deploy, wait for stability, smoke test (rolls back on failure)
         env:
