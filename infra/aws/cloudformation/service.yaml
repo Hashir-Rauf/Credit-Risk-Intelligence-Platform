@@ -1,0 +1,374 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Credit Risk API - ECS Fargate service (0.25 vCPU / 0.5 GB, one task), its security group, the two task roles,
+  the GitHub OIDC deploy role and the CloudWatch alarms. Needs bootstrap.yaml deployed first.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Public subnets for the task (it gets a public IP; there is no load balancer).
+  AllowedCidr:
+    Type: String
+    Description: The only source range allowed to reach port 8000, for example 203.0.113.7/32. Never 0.0.0.0/0.
+    AllowedPattern: "^(?!0\\.0\\.0\\.0/0$)\\d{1,3}(\\.\\d{1,3}){3}/([89]|[12]\\d|3[0-2])$"
+  GitHubRepo:
+    Type: String
+    Default: Hashir-Rauf/Credit-Risk-Intelligence-Platform
+  GitHubEnvironment:
+    Type: String
+    Default: production
+    Description: The GitHub Environment whose jobs may assume the deploy role (restrict it to the main branch there).
+  CreateOidcProvider:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Set to false when the account already has the token.actions.githubusercontent.com OIDC provider.
+  ExistingOidcProviderArn:
+    Type: String
+    Default: ""
+  LatencyThresholdMs:
+    Type: Number
+    Default: 500
+  DvcBucketName:
+    Type: String
+    Default: credit-risk-dvc-922844966900-ap-southeast-2-an
+    Description: The S3 bucket behind the DVC remote `s3` (Phase 0/1). The deploy role may only read its dvc/ prefix.
+
+Conditions:
+  MakeOidcProvider: !Equals [!Ref CreateOidcProvider, "true"]
+
+Resources:
+  # ---------------------------------------------------------------- network
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Scoring API - inbound 8000 from the allowed range only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: !Ref AllowedCidr
+          Description: Operator range (the deploy workflow adds and removes the runner address for its smoke test)
+
+  # ---------------------------------------------------------------- roles
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: credit-risk-api-execution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: { "aws:SourceAccount": !Ref "AWS::AccountId" }
+      Policies:
+        - PolicyName: pull-log-and-read-the-two-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: EcrAuth
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PullImage
+                Effect: Allow
+                Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer, ecr:BatchCheckLayerAvailability]
+                Resource: !ImportValue credit-risk-bootstrap-RepositoryArn
+              - Sid: WriteLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub
+                  - "${Group}:*"
+                  - Group: !ImportValue credit-risk-bootstrap-LogGroupArn
+              - Sid: ReadTheTwoSecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !ImportValue credit-risk-bootstrap-ApiKeySecretArn
+                  - !ImportValue credit-risk-bootstrap-PredictionLogSaltSecretArn
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: credit-risk-api-task
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: { "aws:SourceAccount": !Ref "AWS::AccountId" }
+      Policies:
+        - PolicyName: model-prefix-read-and-prediction-log-write
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadModelArtifacts
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub
+                  - "${Bucket}/models/*"
+                  - Bucket: !ImportValue credit-risk-bootstrap-ArtifactBucketArn
+              - Sid: WritePredictionLog
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub
+                  - "${Bucket}/prediction-logs/*"
+                  - Bucket: !ImportValue credit-risk-bootstrap-ArtifactBucketArn
+              - Sid: WriteApplicationLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub
+                  - "${Group}:*"
+                  - Group: !ImportValue credit-risk-bootstrap-LogGroupArn
+
+  # ---------------------------------------------------------------- ECS
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: credit-risk
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled # extra cost; application metrics are on /metrics and in the request log
+
+  # Placeholder revision 1. Real revisions are registered by deploy.yml with the image tagged by git SHA.
+  # Do not update this stack after deployments have started (it would reset the service to this revision).
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: credit-risk-api
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: api
+          Image: !Sub
+            - "${Repo}:bootstrap"
+            - Repo: !ImportValue credit-risk-bootstrap-RepositoryUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - { Name: LOG_LEVEL, Value: INFO }
+            - { Name: MODEL_VERSION, Value: bootstrap }
+            - { Name: GIT_SHA, Value: bootstrap }
+            - { Name: RATE_LIMIT_PER_MINUTE, Value: "600" }
+            - { Name: PREDICTION_LOG_PATH, Value: /app/state/predictions.db }
+            - Name: PREDICTION_LOG_S3_URI
+              Value: !Sub
+                - "s3://${Bucket}/prediction-logs"
+                - Bucket: !ImportValue credit-risk-bootstrap-ArtifactBucket
+          Secrets:
+            - Name: API_KEY
+              ValueFrom: !ImportValue credit-risk-bootstrap-ApiKeySecretArn
+            - Name: PREDICTION_LOG_SALT
+              ValueFrom: !ImportValue credit-risk-bootstrap-PredictionLogSaltSecretArn
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !ImportValue credit-risk-bootstrap-LogGroup
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: api
+          HealthCheck:
+            Command:
+              - CMD
+              - python
+              - -c
+              - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: credit-risk-api
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 0 # deploy.yml scales this to 1 with the first real image
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true # ECS rolls back a revision whose tasks never become healthy
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: [!Ref ServiceSecurityGroup]
+          Subnets: !Ref SubnetIds
+
+  # ---------------------------------------------------------------- GitHub OIDC (no stored AWS keys)
+  OidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: MakeOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: credit-risk-github-deploy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If [MakeOidcProvider, !Ref OidcProvider, !Ref ExistingOidcProviderArn]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                # Jobs that use a GitHub Environment present this subject, not a branch ref. The Environment
+                # itself is limited to `main` (see docs/aws-deployment.md).
+                "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+      Policies:
+        - PolicyName: build-push-and-deploy-the-one-service
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: EcrAuth
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PushToThisRepositoryOnly
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:DescribeImages
+                  - ecr:DescribeImageScanFindings
+                Resource: !ImportValue credit-risk-bootstrap-RepositoryArn
+              - Sid: TaskDefinitionsHaveNoResourceLevelPermissions
+                Effect: Allow
+                Action: [ecs:RegisterTaskDefinition, ecs:DescribeTaskDefinition, ecs:ListTaskDefinitions]
+                Resource: "*"
+              - Sid: UpdateOnlyThisService
+                Effect: Allow
+                Action: [ecs:UpdateService, ecs:DescribeServices]
+                Resource: !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:service/credit-risk/credit-risk-api"
+              - Sid: FindTheRunningTask
+                Effect: Allow
+                Action: [ecs:ListTasks, ecs:DescribeTasks]
+                Resource: "*"
+                Condition:
+                  ArnEquals:
+                    "ecs:cluster": !GetAtt Cluster.Arn
+              - Sid: PassOnlyTheTwoTaskRoles
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: [!GetAtt ExecutionRole.Arn, !GetAtt TaskRole.Arn]
+                Condition:
+                  StringEquals:
+                    "iam:PassedToService": ecs-tasks.amazonaws.com
+              - Sid: PullTheModelFromTheDvcRemote
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${DvcBucketName}/dvc/*"
+              - Sid: ListTheDvcRemote
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${DvcBucketName}"
+                Condition:
+                  StringLike:
+                    "s3:prefix": ["dvc/*"]
+              - Sid: SmokeTestKey
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !ImportValue credit-risk-bootstrap-ApiKeySecretArn
+              - Sid: OpenThePortForTheRunnerDuringTheSmokeTest
+                Effect: Allow
+                Action: [ec2:AuthorizeSecurityGroupIngress, ec2:RevokeSecurityGroupIngress]
+                Resource: !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:security-group/${ServiceSecurityGroup.GroupId}"
+              - Sid: ReadNetworkDetails
+                Effect: Allow
+                Action: [ec2:DescribeNetworkInterfaces, ec2:DescribeSecurityGroups]
+                Resource: "*"
+
+  # ---------------------------------------------------------------- alarms (no load balancer: derived from the JSON request log)
+  ServerErrorFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !ImportValue credit-risk-bootstrap-LogGroup
+      FilterPattern: '{ $.message = "request" && $.status >= 500 }'
+      MetricTransformations:
+        - MetricNamespace: CreditRisk/Api
+          MetricName: ServerErrors
+          MetricValue: "1"
+          DefaultValue: 0
+
+  LatencyFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !ImportValue credit-risk-bootstrap-LogGroup
+      FilterPattern: '{ $.message = "request" && $.route != "/health" && $.route != "/metrics" }'
+      MetricTransformations:
+        - MetricNamespace: CreditRisk/Api
+          MetricName: RequestDurationMs
+          MetricValue: $.duration_ms
+
+  ServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: credit-risk-api-5xx
+      AlarmDescription: The API returned HTTP 5xx.
+      Namespace: CreditRisk/Api
+      MetricName: ServerErrors
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!ImportValue credit-risk-bootstrap-AlertTopicArn]
+      OKActions: [!ImportValue credit-risk-bootstrap-AlertTopicArn]
+
+  LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: credit-risk-api-p95-latency
+      AlarmDescription: p95 request latency (ms) above the threshold for 2 of 3 minutes.
+      Namespace: CreditRisk/Api
+      MetricName: RequestDurationMs
+      ExtendedStatistic: p95
+      Period: 60
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 2
+      Threshold: !Ref LatencyThresholdMs
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!ImportValue credit-risk-bootstrap-AlertTopicArn]
+      OKActions: [!ImportValue credit-risk-bootstrap-AlertTopicArn]
+
+Outputs:
+  ClusterName:
+    Value: !Ref Cluster
+  ServiceName:
+    Value: !GetAtt Service.Name
+  SecurityGroupId:
+    Value: !GetAtt ServiceSecurityGroup.GroupId
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn
+  TaskRoleArn:
+    Value: !GetAtt TaskRole.Arn
+  DeployRoleArn:
+    Value: !GetAtt DeployRole.Arn

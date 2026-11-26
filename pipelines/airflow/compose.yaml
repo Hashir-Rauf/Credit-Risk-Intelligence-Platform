@@ -5,6 +5,8 @@ services:
     command: standalone
     ports:
       - "127.0.0.1:8085:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # reach the drift monitor published on the host (Linux needs this)
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
@@ -23,6 +25,8 @@ services:
       MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME:?Set the MLflow user}
       MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD:?Set the MLflow token}
       PHASE5_NOTIFY_WEBHOOK: ${PHASE5_NOTIFY_WEBHOOK:-}
+      # Phase 8: where drift_watch_dag reads the drift monitor's status (the Compose monitoring stack).
+      DRIFT_STATUS_URL: ${DRIFT_STATUS_URL:-http://host.docker.internal:9101/status}
       PHASE5_SOURCE_S3: ${PHASE5_SOURCE_S3:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}

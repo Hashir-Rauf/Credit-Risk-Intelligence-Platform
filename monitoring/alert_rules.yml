@@ -1,0 +1,62 @@
+# Alert rules (Phase 8). Thresholds follow rules.md section 9; each one is triggered once on purpose and the
+# evidence is kept in docs/evidence/phase-8/. Sources: the API's /metrics and the drift monitor's /metrics.
+groups:
+  - name: scoring-api
+    rules:
+      - alert: ApiDown
+        expr: up{job="credit-risk-api"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: The scoring API cannot be scraped
+          description: Prometheus has not been able to scrape the API for a minute.
+
+      - alert: HighErrorRate
+        # 5xx share of all requests. A pod that has lost its model answers 503 and counts here too.
+        expr: |
+          sum(rate(api_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(api_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: More than 5 percent of requests fail
+          description: "Error rate is {{ $value | humanizePercentage }} over 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(api_request_duration_seconds_bucket{route!~"/metrics|/health"}[5m]))) > 0.5
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: p95 latency above 500 ms
+          description: "p95 latency is {{ $value | humanizeDuration }}."
+
+  - name: model-and-data
+    rules:
+      - alert: DataDriftDetected
+        # Share of input features whose PSI is at or above 0.2; the monitor only reports it once the window
+        # has enough predictions to judge.
+        expr: monitor_window_sufficient == 1 and monitor_drift_share > 0.3
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: Input data drifted away from the training data
+          description: "{{ $value | humanizePercentage }} of the input features drifted. Start the investigation checklist in docs/promotion-rollback.md."
+
+      - alert: DataQualityFailures
+        expr: monitor_data_quality_failed_cells > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Logged inputs violate the feature schema
+          description: "{{ $value }} cells outside the schema in the monitored window: an upstream change or a client bypassing validation."
+
+      - alert: LivePerformanceDrop
+        # Labels are simulated in this project (see docs/promotion-rollback.md); the rule is what a real one would be.
+        expr: monitor_labelled_rows >= 100 and monitor_live_auc < 0.70
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Live ROC-AUC fell below 0.70
+          description: "Live AUC is {{ $value }} on labelled predictions."

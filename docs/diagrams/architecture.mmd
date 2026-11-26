@@ -1,0 +1,50 @@
+flowchart TB
+  subgraph DATA["Data and experiments"]
+    UCI[("UCI dataset")] --> DVC["DVC + DagsHub remote"]
+    DVC --> TRAIN["src/ pipeline: validate, features (Feast), tune, train, evaluate, fairness"]
+    TRAIN --> MLF["MLflow tracking and registry (DagsHub)"]
+  end
+
+  subgraph ORCH["Orchestration (local, Minikube)"]
+    AF["Airflow: ml_orchestrator_dag, retrain_dag, drift_watch_dag"]
+    KFP["Kubeflow Pipelines: preprocess, train_tune, evaluate, package_register"]
+    AF -->|"validated data (DVC)"| KFP
+    KFP -->|"gated model, staging alias"| MLF
+  end
+
+  subgraph CI["GitHub Actions"]
+    TESTS["lint, tests, bandit, pip-audit, gitleaks, Trivy"]
+    DEPLOY["deploy.yml (production Environment, reviewer approves)"]
+    TESTS -->|"success on main"| DEPLOY
+  end
+
+  subgraph AWS["AWS (ap-southeast-2)"]
+    ECR[("ECR: image tagged by git SHA")]
+    ECS["ECS Fargate: scoring API"]
+    SM["Secrets Manager: API key"]
+    CW["CloudWatch logs + alarms -> SNS"]
+    S3[("S3: prediction logs")]
+    ECR --> ECS
+    SM --> ECS
+    ECS --> CW
+    ECS --> S3
+  end
+
+  subgraph LOCAL["Local stack (Compose / Kubernetes)"]
+    UI["Next.js UI (holds the API key server-side)"] --> API["Flask API (gunicorn)"]
+    API --> PLOG[("prediction log (pseudonymised)")]
+    PLOG --> MON["drift monitor: PSI, data quality, live AUC (simulated labels), Evidently report"]
+    API -->|"/metrics"| PROM["Prometheus"]
+    MON -->|"/metrics"| PROM
+    PROM --> GRAF["Grafana dashboard"]
+    PROM --> AM["Alertmanager"]
+  end
+
+  MLF -. "approved model version" .-> DEPLOY
+  DEPLOY -->|"OIDC role, no stored keys"| ECR
+  DEPLOY -->|"register task definition, deploy, smoke test"| ECS
+  MON -. "/status" .-> AF
+  AM -->|"notification"| OPS(["on-call"])
+  DEV(["developer"]) -->|"PR"| TESTS
+  CLIENT(["client / curl"]) -->|"X-API-Key"| ECS
+  CLIENT --> UI

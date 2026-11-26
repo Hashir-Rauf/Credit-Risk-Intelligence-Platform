@@ -10,7 +10,14 @@ inputs and no customer identifiers ever reach a metric.
 
 from __future__ import annotations
 
-from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest
+from prometheus_client import (
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    ProcessCollector,
+    generate_latest,
+)
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 
 LATENCY_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
@@ -58,6 +65,8 @@ class ApiMetrics:
         self.model_loaded = Gauge(
             "api_model_loaded", "1 when a model is loaded", registry=self.registry
         )
+        # Process CPU and memory: the dashboard's container CPU/memory (one process per container).
+        ProcessCollector(registry=self.registry)
 
     def render(self) -> tuple[bytes, str]:
         return generate_latest(self.registry), CONTENT_TYPE_LATEST

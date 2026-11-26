@@ -26,7 +26,9 @@ from werkzeug.exceptions import HTTPException
 
 from src.models import inference
 from src.monitoring.metrics import ApiMetrics
+from src.monitoring.prediction_log import PredictionLog
 from src.serving.model_loader import Bundle, BundleHolder, warm_up
+from src.serving.rate_limit import RateLimiter
 from src.serving.schemas import RequestError, ignored_fields, parse_records, validate_record
 from src.serving.settings import DISCLAIMER, Settings
 
@@ -74,6 +76,43 @@ def _error(status: int, code: str, message: str, details: Any = None) -> Respons
     return response
 
 
+def _open_prediction_log(settings: Settings) -> PredictionLog | None:
+    """Open the pseudonymised prediction log when configured; start the optional S3 exporter."""
+    if settings.prediction_log_path is None:
+        return None
+    if not settings.prediction_log_salt:
+        log.warning(
+            "PREDICTION_LOG_SALT is empty: customer pseudonyms are not protected by a secret"
+        )
+    store = PredictionLog(
+        settings.prediction_log_path,
+        settings.prediction_log_retention_days,
+        settings.prediction_log_salt,
+    )
+    if settings.prediction_log_s3_uri:
+        threading.Thread(target=_export_loop, args=(store, settings), daemon=True).start()
+    return store
+
+
+def _export_loop(store: PredictionLog, settings: Settings) -> None:
+    from urllib.parse import urlsplit
+
+    target = urlsplit(settings.prediction_log_s3_uri or "")
+    try:
+        import boto3
+
+        client = boto3.client("s3")
+    except ImportError:
+        log.warning("PREDICTION_LOG_S3_URI is set but boto3 is not installed; export disabled")
+        return
+    while True:
+        time.sleep(settings.prediction_log_s3_interval_s)
+        try:
+            store.export_new(client, target.netloc, target.path.strip("/") or "prediction-logs")
+        except Exception:
+            log.warning("prediction log export failed", exc_info=True)
+
+
 def create_app(
     settings: Settings | None = None,
     bundle: Bundle | None = None,
@@ -89,6 +128,10 @@ def create_app(
     api_metrics = metrics or ApiMetrics()
     if settings.warmup and holder.get() is not None:
         threading.Thread(target=_warm_up_quietly, args=(holder.get(),), daemon=True).start()
+    prediction_log = _open_prediction_log(settings)
+    limiter = (
+        RateLimiter(settings.rate_limit_per_minute) if settings.rate_limit_per_minute else None
+    )
     started = time.time()
     if settings.allow_anonymous:
         log.warning("API_ALLOW_ANONYMOUS=1: authentication is DISABLED (development only)")
@@ -106,6 +149,12 @@ def create_app(
         g.n_records = 0
         api_metrics.in_flight.inc()
         endpoint = request.endpoint
+        if limiter is not None and endpoint not in OPEN_ENDPOINTS:
+            allowed, wait = limiter.allow(request.remote_addr or "unknown")
+            if not allowed:
+                response = _error(429, "rate_limited", "too many requests; slow down")
+                response.headers["Retry-After"] = str(wait)
+                return response
         if endpoint in OPEN_ENDPOINTS or settings.allow_anonymous or endpoint is None:
             return None
         supplied = request.headers.get("X-API-Key", "")
@@ -148,6 +197,7 @@ def create_app(
             404: "not_found",
             405: "method_not_allowed",
             413: "payload_too_large",
+            429: "rate_limited",
             415: "unsupported_media_type",
         }
         messages = {
@@ -245,6 +295,15 @@ def create_app(
             predictions.append({"risk_score": round(float(score), 6), "prediction": flagged})
             api_metrics.scores.labels(version).observe(float(score))
             api_metrics.predictions.labels(version, "flagged" if flagged else "not_flagged").inc()
+        if prediction_log is not None:
+            inputs = [{name: record.get(name) for name in columns} for record in records]
+            prediction_log.record(
+                g.request_id,
+                inputs,
+                [p["risk_score"] for p in predictions],
+                version,
+                request.headers.get("X-Customer-Id"),
+            )
         extra = sorted(
             {name for record in records for name in ignored_fields(record, loaded.inputs)}
         )
@@ -312,6 +371,7 @@ def create_app(
         payload, content_type = api_metrics.render()
         return Response(payload, mimetype=content_type.split(";")[0], content_type=content_type)
 
+    app.extensions["prediction_log"] = prediction_log
     app.extensions["bundle_holder"] = holder
     app.extensions["api_metrics"] = api_metrics
     return app

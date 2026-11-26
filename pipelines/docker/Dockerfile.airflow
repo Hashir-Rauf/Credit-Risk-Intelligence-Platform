@@ -10,6 +10,7 @@ COPY --from=ml /opt/venv /opt/venv
 COPY --from=ml /app /app
 COPY --from=compiler /opt/kfp /opt/kfp
 COPY pipelines/kubeflow /app/pipelines/kubeflow
+COPY pipelines/retrain /app/pipelines/retrain
 COPY tests/fixtures/credit_corrupt.csv /app/tests/fixtures/credit_corrupt.csv
 COPY pipelines/airflow/dags /opt/airflow/dags
 ARG COMPONENT_IMAGE=credit-risk-phase5:local

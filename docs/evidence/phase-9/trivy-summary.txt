@@ -1,0 +1,4 @@
+Trivy (HIGH and CRITICAL, fixes available only), 2026-11-26
+credit-risk-api:scan: 0 HIGH/CRITICAL findings with a fix available
+credit-risk-monitor:scan: 0 HIGH/CRITICAL findings with a fix available
+credit-risk-frontend:v1: 0 HIGH/CRITICAL findings with a fix available

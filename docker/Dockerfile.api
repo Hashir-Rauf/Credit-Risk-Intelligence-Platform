@@ -40,7 +40,8 @@ COPY --from=builder /opt/venv /opt/venv
 COPY src ./src
 COPY params.yaml dvc.lock ./
 COPY reports/feature_schema.json reports/metrics.json reports/evaluation.json ./reports/
-RUN mkdir -p /app/models && chown -R app:app /app
+# /app/state holds the prediction log (a volume in Compose; ephemeral on ECS, which exports it to S3).
+RUN mkdir -p /app/models /app/state && chown -R app:app /app
 USER app
 
 EXPOSE 8000

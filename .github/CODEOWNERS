@@ -21,6 +21,9 @@
 /tests/               @JA-Codex
 /tests/test_data.py   @Hashir-Rauf
 /tests/fixtures/      @Hashir-Rauf
+/tests/test_api.py    @Hashir-Rauf
+/tests/test_monitor.py @Hashir-Rauf
+/tests/test_prediction_log.py @Hashir-Rauf
 /dvc.yaml             @Hashir-Rauf
 /dvc.lock             @Hashir-Rauf
 /.dvc/config          @Hashir-Rauf

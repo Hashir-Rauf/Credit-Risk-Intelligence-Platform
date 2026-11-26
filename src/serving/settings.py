@@ -54,6 +54,12 @@ class Settings:
     explain_max_records: int
     warmup: bool
     log_level: str
+    prediction_log_path: Path | None = None
+    prediction_log_retention_days: int = 30
+    prediction_log_salt: str = ""
+    prediction_log_s3_uri: str | None = None
+    prediction_log_s3_interval_s: int = 300
+    rate_limit_per_minute: int = 0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -87,4 +93,12 @@ class Settings:
             explain_max_records=_int(env, "EXPLAIN_MAX_RECORDS", 5, 1, 100),
             warmup=env.get("WARMUP_EXPLAIN", "1") != "0",
             log_level=env.get("LOG_LEVEL", "INFO").upper(),
+            prediction_log_path=(
+                Path(env["PREDICTION_LOG_PATH"]) if env.get("PREDICTION_LOG_PATH") else None
+            ),
+            prediction_log_retention_days=_int(env, "PREDICTION_LOG_RETENTION_DAYS", 30, 1, 365),
+            prediction_log_salt=env.get("PREDICTION_LOG_SALT", ""),
+            prediction_log_s3_uri=env.get("PREDICTION_LOG_S3_URI") or None,
+            prediction_log_s3_interval_s=_int(env, "PREDICTION_LOG_S3_INTERVAL_S", 300, 30, 86_400),
+            rate_limit_per_minute=_int(env, "RATE_LIMIT_PER_MINUTE", 0, 0, 1_000_000),
         )

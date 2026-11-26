@@ -1,0 +1,17 @@
+# Alertmanager. Every alert goes to the webhook receiver; in the Compose stack that is `alert-sink`, which prints and
+# stores the notification (the evidence that an alert fired and resolved). For real notifications replace or add a
+# receiver, for example:
+#   email_configs: [{to: team@example.org, from: alerts@example.org, smarthost: smtp.example.org:587, ...}]
+#   slack_configs: [{api_url_file: /etc/alertmanager/slack-webhook, channel: "#mlops-alerts", send_resolved: true}]
+# Keep real webhook URLs and SMTP passwords in files mounted at run time, never in this file.
+route:
+  receiver: alert-sink
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+receivers:
+  - name: alert-sink
+    webhook_configs:
+      - url: http://alert-sink:5001/alert
+        send_resolved: true

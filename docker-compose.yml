@@ -24,10 +24,15 @@ services:
       API_KEY: ${API_KEY:?set API_KEY in .env (16+ characters)}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       MODEL_VERSION: ${MODEL_VERSION:-local}
+      # Pseudonymised prediction log for the drift monitor (retention enforced by the API).
+      PREDICTION_LOG_PATH: /app/state/predictions.db
+      PREDICTION_LOG_SALT: ${PREDICTION_LOG_SALT:-local-development-salt}
+      PREDICTION_LOG_RETENTION_DAYS: ${PREDICTION_LOG_RETENTION_DAYS:-30}
       # Model from the mounted files below. To load from the registry instead, set MODEL_URI
       # (needs an image with mlflow, plus MLFLOW_TRACKING_* in the environment).
     volumes:
       - ./models:/app/models:ro
+      - prediction-log:/app/state
     ports:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
@@ -80,6 +85,27 @@ services:
     restart: unless-stopped
     networks: [backend]
 
+  monitor:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.monitor
+    image: credit-risk-monitor:${IMAGE_TAG:-local}
+    environment:
+      PREDICTION_LOG_PATH: /app/state/predictions.db
+      MONITOR_HOST: 0.0.0.0 # reachable on the backend network only (no published port)
+      MONITOR_WINDOW_HOURS: ${MONITOR_WINDOW_HOURS:-24}
+      MONITOR_MIN_ROWS: ${MONITOR_MIN_ROWS:-200}
+      MONITOR_INTERVAL_S: ${MONITOR_INTERVAL_S:-15}
+    volumes:
+      - prediction-log:/app/state
+      - ./data/reference:/app/data/reference:ro # dvc repro creates it (src.models.drift)
+      - ./reports/feature_schema.json:/app/reports/feature_schema.json:ro
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks: [backend]
+
   prometheus:
     image: prom/prometheus:v2.54.1
     command:
@@ -87,10 +113,36 @@ services:
       - --storage.tsdb.retention.time=7d
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - prometheus-data:/prometheus
     depends_on:
       api:
         condition: service_started
+    restart: unless-stopped
+    networks: [backend]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    restart: unless-stopped
+    networks: [backend]
+
+  # Local webhook receiver that records every notification (the evidence for "alert fired and resolved").
+  alert-sink:
+    image: python:3.11-slim-bookworm
+    command: ["python", "/app/alert_sink.py"]
+    environment:
+      ALERT_SINK_HOST: 0.0.0.0
+      ALERT_LOG: /tmp/alerts.log # notifications are printed too: `docker compose logs alert-sink`
+      PYTHONUNBUFFERED: "1"
+    user: "10001:10001"
+    volumes:
+      - ./monitoring/alert_sink.py:/app/alert_sink.py:ro
     restart: unless-stopped
     networks: [backend]
 
@@ -103,6 +155,7 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
@@ -120,3 +173,5 @@ volumes:
   mlflow-artifacts: {}
   prometheus-data: {}
   grafana-data: {}
+  prediction-log: {}
+  alertmanager-data: {}

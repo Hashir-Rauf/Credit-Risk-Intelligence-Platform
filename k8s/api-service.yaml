@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: credit-risk
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: credit-risk
+spec:
+  type: ClusterIP # reachable inside the cluster only; the frontend (or kubectl port-forward) is the way in
+  selector:
+    app.kubernetes.io/name: api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

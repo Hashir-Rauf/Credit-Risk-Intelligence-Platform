@@ -552,3 +552,73 @@ def test_bento_model_info_matches(bento, client):
     info = bento.model_info()
     for key in ("algorithm", "threshold", "model_sha256", "raw_data_md5"):
         assert info[key] == flask_info[key]
+
+
+# --------------------------------------------------------------------------- prediction log (8)
+
+
+def test_predictions_are_logged_pseudonymised_when_enabled(tmp_path, artifacts, record):
+    db = tmp_path / "predictions.db"
+    env = make_env(
+        artifacts["root"], PREDICTION_LOG_PATH=str(db), PREDICTION_LOG_SALT="s3cret-salt"
+    )
+    app = create_app(Settings.from_env(env))
+    reply = app.test_client().post(
+        "/predict", json=record, headers={**HEADERS, "X-Customer-Id": "customer-42"}
+    )
+    assert reply.status_code == 200
+    store = app.extensions["prediction_log"]
+    rows = store.recent()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["request_id"] == reply.get_json()["request_id"]
+    assert row["model_version"] == "7"
+    assert row["score"] == reply.get_json()["predictions"][0]["risk_score"]
+    assert row["customer_hash"] and "customer-42" not in json.dumps(row)
+    assert set(row["features"]) == set(artifacts["columns"])
+    assert "SEX" not in row["features"]
+
+
+def test_prediction_log_is_off_by_default(client, record):
+    assert client.post("/predict", json=record, headers=HEADERS).status_code == 200
+    assert client.application.extensions["prediction_log"] is None
+
+
+def test_a_broken_prediction_log_never_fails_a_prediction(tmp_path, artifacts, record):
+    env = make_env(artifacts["root"], PREDICTION_LOG_PATH=str(tmp_path / "p.db"))
+    app = create_app(Settings.from_env(env))
+    app.extensions["prediction_log"]._db.close()  # simulate a dead database
+    assert app.test_client().post("/predict", json=record, headers=HEADERS).status_code == 200
+    assert app.extensions["prediction_log"].failures == 1
+
+
+# --------------------------------------------------------------------------- rate limit (Phase 9)
+
+
+def test_rate_limit_refuses_the_excess_with_retry_after(artifacts, record):
+    app = create_app(Settings.from_env(make_env(artifacts["root"], RATE_LIMIT_PER_MINUTE="3")))
+    client = app.test_client()
+    codes = [client.post("/predict", json=record, headers=HEADERS).status_code for _ in range(5)]
+    assert codes == [200, 200, 200, 429, 429]
+    refused = client.post("/predict", json=record, headers=HEADERS)
+    assert refused.get_json()["error"]["code"] == "rate_limited"
+    assert int(refused.headers["Retry-After"]) >= 1
+    assert client.get("/health").status_code == 200  # probes and scraping are never limited
+    assert client.get("/metrics").status_code == 200
+
+
+def test_rate_limit_is_off_by_default(client, record):
+    assert all(
+        client.post("/predict", json=record, headers=HEADERS).status_code == 200 for _ in range(8)
+    )
+
+
+def test_rate_limiter_window_slides():
+    from src.serving.rate_limit import RateLimiter
+
+    limiter = RateLimiter(2, window_s=10)
+    assert limiter.allow("a", now=0)[0] and limiter.allow("a", now=1)[0]
+    allowed, wait = limiter.allow("a", now=2)
+    assert not allowed and 1 <= wait <= 10
+    assert limiter.allow("b", now=2)[0]  # another client is unaffected
+    assert limiter.allow("a", now=10.5)[0]  # the first hit has left the window

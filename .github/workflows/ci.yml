@@ -121,6 +121,8 @@ jobs:
         run: docker build -f docker/Dockerfile.api --target runtime -t credit-risk-api:ci .
       - name: Build the frontend image
         run: docker build -t credit-risk-frontend:ci frontend
+      - name: Build the drift monitor image
+        run: docker build -f docker/Dockerfile.monitor -t credit-risk-monitor:ci .
       - name: Smoke test the API container (no model inside, so it must say 503)
         run: |
           KEY="$(openssl rand -hex 16)"
@@ -143,6 +145,13 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: credit-risk-api:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Trivy scan of the drift monitor image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: credit-risk-monitor:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"

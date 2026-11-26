@@ -203,6 +203,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 6 — AWS deployment and CD
+**Status (2026-11-26):** code and docs written and statically checked (`infra/aws/`, `deploy.yml`, `rollback.yml`, `docs/aws-deployment.md`); **not yet run on AWS** (cost, and the GitHub OIDC provider may be blocked by an SCP). IaC is CloudFormation, not Terraform.
 **Goal:** approved image runs on AWS and is reachable, deployed by CI/CD with rollback. **Owners:** S3 (infra), S2 (workflow). **Prereq:** Phases 3, 4.
 
 **Steps**
@@ -231,6 +232,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 7 — Kubernetes deployment and scaling
+**Status (2026-11-26):** done on a local Minikube cluster; evidence in `docs/evidence/phase-7/`. HPA written, not exercised.
 **Goal:** show orchestration, self-healing and scaling locally. **Owner:** S3. **Prereq:** Phase 4 (can run alongside Phase 6).
 
 **Steps**
@@ -256,6 +258,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 8 — Monitoring, drift, and automated retraining
+**Status (2026-11-26):** monitoring stack, drift monitor, alerts, retrain/watch DAGs demonstrated locally with SIMULATED drift and labels; promotion/rollback workflow written, not yet run; evidence in `docs/evidence/phase-8/`. The Evidently job lives in `src/monitoring/drift.py` (owner `@Hashir-Rauf`, using `src/models/drift.py` data from `@JA-Codex`).
 **Goal:** observe the live service, detect drift, and run a controlled retrain-evaluate-promote loop. **Owners:** S3 (metrics/dashboards/alerts), S1 (Evidently/evaluation logic), S2 (retrain DAG). **Prereq:** Phases 4, 5, 6.
 
 **Steps**
@@ -283,6 +286,7 @@ Legend: **S1** Data & ML · **S2** MLOps & Automation · **S3** Deployment & Rel
 ---
 
 ## Phase 9 — Security, ethics, and documentation
+**Status (2026-11-26):** audit, risk assessment, README, REPORT, diagrams written; fresh-machine reproduction by a non-author and the AWS-dependent evidence are still open.
 **Goal:** security implemented (not just described), and a complete, reproducible write-up. **Owner:** all. **Prereq:** Phases 1–8 mostly done.
 
 **Steps**
