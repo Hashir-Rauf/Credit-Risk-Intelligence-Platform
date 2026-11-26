@@ -1,0 +1,89 @@
+# Scoring API. The image tag is the only thing that changes between releases (use the git SHA in real use).
+# kubectl apply -f k8s/ ; the demo script uses tags v1 and v2 loaded into the local cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: credit-risk
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: credit-risk
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # never remove a serving pod before its replacement is Ready
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: credit-risk
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: credit-risk-api:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: api-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: API_KEY
+          readinessProbe: # traffic only reaches a pod whose model is loaded (/health is 503 otherwise)
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          livenessProbe: # restart a pod that stops answering at all; lenient so a slow start is not killed
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

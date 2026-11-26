@@ -1,0 +1,21 @@
+flowchart TD
+  A["Drift or weekly schedule"] --> B["retrain_dag"]
+  B --> C["fetch data"] --> D{"validation passes?"}
+  D -- "no" --> X1["stop: nothing reaches DVC or Kubeflow"]
+  D -- "yes" --> E["DVC push validated snapshot"] --> F["Kubeflow run: preprocess, train_tune, evaluate"]
+  F --> G{"quality gate passes?"}
+  G -- "no" --> X2["package_register skipped: no model registered"]
+  G -- "yes" --> H["register version, alias staging"]
+  H --> I["decide: score challenger and champion on the same test split"]
+  I --> J{"ROC-AUC +0.005, no PR-AUC/KS or fairness regression?"}
+  J -- "no" --> X3["rejected: reasons recorded, champion keeps serving"]
+  J -- "yes" --> K["alias challenger, approval requested"]
+  K --> L["Deploy workflow, model_version = N"]
+  L --> M{"human approves production Environment?"}
+  M -- "no" --> X4["nothing changes"]
+  M -- "yes" --> N["check, fetch model, build, Trivy, push, deploy"]
+  N --> O{"smoke test passes?"}
+  O -- "no" --> R["automatic rollback; champion alias untouched"]
+  O -- "yes" --> P["champion alias := N; previous champion tagged for rollback"]
+  P --> Q["monitor the new model"]
+  Q --> A

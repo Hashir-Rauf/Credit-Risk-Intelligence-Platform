@@ -1,0 +1,74 @@
+# Demo load generator (not applied with the main manifests). It runs INSIDE the cluster and opens a new TCP
+# connection per request, so kube-proxy spreads the requests over the API pods (a `kubectl port-forward` would
+# pin everything to one pod). Reuses the API image, which already contains python.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen
+  namespace: credit-risk
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loadgen
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loadgen
+          image: credit-risk-api:v1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: API_KEY
+            - name: REQUESTS
+              value: "600"
+            - name: THREADS
+              value: "8"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          command: ["python", "-c"]
+          args:
+            - |
+              import json, os, threading, time, urllib.request
+              body = json.dumps({"LIMIT_BAL": 50000, "EDUCATION": 3, "PAY_1": 1, "PAY_2": 2, "PAY_3": 0, "PAY_4": 0,
+                  "PAY_5": 0, "PAY_6": 0, "BILL_AMT1": 49000, "BILL_AMT2": 48000, "BILL_AMT3": 47000,
+                  "BILL_AMT4": 46000, "BILL_AMT5": 45000, "BILL_AMT6": 44000, "PAY_AMT1": 1500, "PAY_AMT2": 1000,
+                  "PAY_AMT3": 1000, "PAY_AMT4": 1200, "PAY_AMT5": 1000, "PAY_AMT6": 1000}).encode()
+              total, workers = int(os.environ["REQUESTS"]), int(os.environ["THREADS"])
+              lock, counts, latencies = threading.Lock(), {}, []
+              def work(n):
+                  for _ in range(n):
+                      req = urllib.request.Request("http://api:8000/predict", data=body, method="POST",
+                          headers={"Content-Type": "application/json", "X-API-Key": os.environ["API_KEY"]})
+                      start = time.perf_counter()
+                      try:
+                          code = urllib.request.urlopen(req, timeout=30).status
+                      except Exception as exc:
+                          code = getattr(exc, "code", 0)
+                      with lock:
+                          counts[code] = counts.get(code, 0) + 1
+                          latencies.append(time.perf_counter() - start)
+              begin = time.perf_counter()
+              threads = [threading.Thread(target=work, args=(total // workers,)) for _ in range(workers)]
+              [t.start() for t in threads]; [t.join() for t in threads]
+              elapsed = time.perf_counter() - begin
+              latencies.sort()
+              print(json.dumps({"requests": len(latencies), "status_counts": counts, "seconds": round(elapsed, 1),
+                  "requests_per_second": round(len(latencies) / elapsed, 1),
+                  "p50_ms": round(latencies[len(latencies) // 2] * 1000, 1),
+                  "p95_ms": round(latencies[int(len(latencies) * 0.95)] * 1000, 1)}))

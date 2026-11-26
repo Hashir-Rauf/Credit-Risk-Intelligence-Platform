@@ -1,0 +1,124 @@
+
+==== 0. Namespace, secret, manifests (context: credit-risk)
+namespace/credit-risk unchanged
+configmap/api-config unchanged
+deployment.apps/api unchanged
+service/api unchanged
+poddisruptionbudget.policy/api configured
+deployment.apps/frontend unchanged
+service/frontend unchanged
+deployment "api" successfully rolled out
+deployment "frontend" successfully rolled out
+NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-rc9w8   1/1     Running   0          85s   10.244.0.33   credit-risk   <none>           <none>
+api-5d84f844d7-rjtrq   1/1     Running   0          79s   10.244.0.34   credit-risk   <none>           <none>
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME   ENDPOINTS                           AGE
+api    10.244.0.33:8000,10.244.0.34:8000   6m55s
+
+==== 1. Scale 2 -> 3 -> 2
+deployment.apps/api scaled
+Waiting for deployment "api" rollout to finish: 2 of 3 updated replicas are available...
+deployment "api" successfully rolled out
+NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-qfmzp   1/1     Running   0          6s    10.244.0.35   credit-risk   <none>           <none>
+api-5d84f844d7-rc9w8   1/1     Running   0          91s   10.244.0.33   credit-risk   <none>           <none>
+api-5d84f844d7-rjtrq   1/1     Running   0          85s   10.244.0.34   credit-risk   <none>           <none>
+deployment.apps/api scaled
+deployment "api" successfully rolled out
+
+==== 2. Self-healing: delete one pod, a replacement appears
+before:
+NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-rc9w8   1/1     Running   0          94s   10.244.0.33   credit-risk   <none>           <none>
+api-5d84f844d7-rjtrq   1/1     Running   0          88s   10.244.0.34   credit-risk   <none>           <none>
+deleting api-5d84f844d7-rc9w8
+pod "api-5d84f844d7-rc9w8" deleted from credit-risk namespace
+after (a pod with a new name and a young AGE has replaced api-5d84f844d7-rc9w8):
+NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-rjtrq   1/1     Running   0          95s   10.244.0.34   credit-risk   <none>           <none>
+api-5d84f844d7-vf75f   1/1     Running   0          7s    10.244.0.36   credit-risk   <none>           <none>
+89s         Normal    Killing             pod/api-5c7bb5946b-bnbt4         Stopping container api
+9s          Normal    Killing             pod/api-5d84f844d7-qfmzp         Stopping container api
+7s          Normal    Killing             pod/api-5d84f844d7-rc9w8         Stopping container api
+7s          Normal    SuccessfulCreate    replicaset/api-5d84f844d7        (combined from similar events): Created pod: api-5d84f844d7-vf75f
+
+==== 3. Load test from inside the cluster: requests are spread over the pods
+(replacement pods start with no /predict counters, so the totals below come from this test only)
+job.batch/loadgen created
+job.batch/loadgen condition met
+{"requests": 600, "status_counts": {"200": 600}, "seconds": 18.4, "requests_per_second": 32.6, "p50_ms": 211.6, "p95_ms": 520.9}
+AFTER  pod/api-5d84f844d7-rjtrq api_requests_total{method="POST",route="/predict",status="200"} 303.0
+AFTER  pod/api-5d84f844d7-vf75f api_requests_total{method="POST",route="/predict",status="200"} 297.0
+
+==== 4. Probes affect routing: a bad MODEL_PATH makes the new pod fail readiness and stay out of the Service
+deployment.apps/api env updated
+NAME                   READY   STATUS    RESTARTS   AGE     IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-rjtrq   1/1     Running   0          2m42s   10.244.0.34   credit-risk   <none>           <none>
+api-5d84f844d7-vf75f   1/1     Running   0          74s     10.244.0.36   credit-risk   <none>           <none>
+api-69c547df97-tdv4q   0/1     Running   0          45s     10.244.0.38   credit-risk   <none>           <none>
+--- endpoints (only Ready pods are listed):
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME   ENDPOINTS                           AGE
+api    10.244.0.34:8000,10.244.0.36:8000   8m18s
+--- rollout is blocked, the old pods keep serving:
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+error: timed out waiting for the condition
+--- probe failure events for api-69c547df97-tdv4q:
+    Readiness:  http-get http://:http/health delay=5s timeout=3s period=5s #success=1 #failure=2
+  Warning  Unhealthy  5s (x12 over 60s)  kubelet            spec.containers{api}: Readiness probe failed: HTTP probe failed with statuscode: 503
+  Warning  Unhealthy  5s (x2 over 20s)   kubelet            spec.containers{api}: Liveness probe failed: HTTP probe failed with statuscode: 503
+--- repair: roll back the bad configuration
+Warning: resource deployments/api was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/api rolled back
+deployment "api" successfully rolled out
+NAME                   READY   STATUS        RESTARTS   AGE    IP            NODE          NOMINATED NODE   READINESS GATES
+api-5d84f844d7-rjtrq   1/1     Running       0          3m3s   10.244.0.34   credit-risk   <none>           <none>
+api-5d84f844d7-vf75f   1/1     Running       0          95s    10.244.0.36   credit-risk   <none>           <none>
+api-69c547df97-tdv4q   0/1     Terminating   0          66s    10.244.0.38   credit-risk   <none>           <none>
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME   ENDPOINTS                           AGE
+api    10.244.0.34:8000,10.244.0.36:8000   8m39s
+
+==== 5. Rolling update v1 -> v2, then rollback
+before: credit-risk-api:v1
+deployment.apps/api image updated
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+deployment "api" successfully rolled out
+after:  credit-risk-api:v2
+NAME                   READY   STATUS        RESTARTS   AGE     IP            NODE          NOMINATED NODE   READINESS GATES
+api-5c7bb5946b-np79v   1/1     Running       0          6s      10.244.0.40   credit-risk   <none>           <none>
+api-5c7bb5946b-qlxxp   1/1     Running       0          13s     10.244.0.39   credit-risk   <none>           <none>
+api-5d84f844d7-rjtrq   1/1     Terminating   0          3m17s   10.244.0.34   credit-risk   <none>           <none>
+{"status":"ok","model_loaded":true,"model_version":"2-demo","uptime_s":3.8}
+
+deployment.apps/api
+REVISION  CHANGE-CAUSE
+10        <none>
+11        <none>
+12        <none>
+
+Warning: resource deployments/api was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/api rolled back
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+deployment "api" successfully rolled out
+rolled back: credit-risk-api:v1
+NAME                   READY   STATUS        RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+api-5c7bb5946b-qlxxp   1/1     Terminating   0          26s   10.244.0.39   credit-risk   <none>           <none>
+api-5d84f844d7-s6kdq   1/1     Running       0          12s   10.244.0.41   credit-risk   <none>           <none>
+api-5d84f844d7-w4dv2   1/1     Running       0          6s    10.244.0.42   credit-risk   <none>           <none>
+
+==== Done
+demo-exit=0

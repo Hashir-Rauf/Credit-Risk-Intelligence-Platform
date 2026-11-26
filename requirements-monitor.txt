@@ -1,0 +1,12 @@
+# Top-level packages the drift monitor needs. Install with the lock file as CONSTRAINTS:
+#
+#   pip install -c requirements.lock.txt -r requirements-monitor.txt
+#
+# evidently renders the HTML drift report; the alerting numbers (PSI) do not depend on it.
+evidently
+pandas
+numpy
+scipy
+pyarrow
+pyyaml
+prometheus-client

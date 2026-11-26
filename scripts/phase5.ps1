@@ -1,13 +1,39 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Build', 'Start', 'Status')]
-    [string]$Action = 'Build'
+    [string]$Action = 'Build',
+    # Minikube profile (= kubectl context = Docker network = node container name). The default keeps the
+    # original single-profile workflow; use a separate profile to leave an existing cluster untouched.
+    [ValidatePattern('^[a-z0-9][a-z0-9-]*$')]
+    [string]$Profile = 'minikube'
 )
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$k = @('--context', 'minikube', '--namespace', 'kubeflow')
+$k = @('--context', $Profile, '--namespace', 'kubeflow')
 function Check([string]$step) {
     if ($LASTEXITCODE -ne 0) { throw "$step failed (exit $LASTEXITCODE)." }
+}
+# Native tools write progress and warnings to stderr (docker build prints ALL its progress there). Under
+# $ErrorActionPreference = 'Stop', Windows PowerShell 5.1 turns the first such line into a terminating error, so
+# `docker build` could never run. Shadow the tools with thin wrappers that tolerate stderr; real failures are still
+# caught because every call below is followed by Check ($LASTEXITCODE).
+foreach ($tool in 'docker', 'kubectl', 'minikube', 'git') {
+    $exe = (Get-Command $tool -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+    if ($exe) {
+        # Forward piped input (e.g. `$json | kubectl apply -f -`) to the real executable when there is some.
+        $body = "`$previous = `$ErrorActionPreference; `$ErrorActionPreference = 'Continue'; " +
+                "try { if (`$MyInvocation.ExpectingInput) { `$input | & '$exe' @args } else { & '$exe' @args } } " +
+                "finally { `$ErrorActionPreference = `$previous }"
+        Set-Item -Path "function:script:$tool" -Value ([scriptblock]::Create($body))
+    }
+}
+# True when a native command exits 0. Needed because with $ErrorActionPreference = 'Stop', Windows PowerShell 5.1
+# turns a native command's stderr into a terminating error EVEN WHEN it is redirected, so a plain
+# `docker image inspect X *> $null` throws when X does not exist instead of letting us test $LASTEXITCODE.
+function Test-Native([scriptblock]$Command) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Command *> $null; return ($LASTEXITCODE -eq 0) } finally { $ErrorActionPreference = $previous }
 }
 function Status {
     kubectl @k get deployments mysql ml-pipeline ml-pipeline-ui workflow-controller
@@ -21,8 +47,7 @@ if ($Action -eq 'Build') {
         $revision = (git rev-parse HEAD)
         Check 'Git revision lookup'
     }
-    docker image inspect credit-risk-ml:phase5 *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-Native { docker image inspect credit-risk-ml:phase5 })) {
         docker build -f pipelines/docker/Dockerfile.base -t credit-risk-ml:phase5 .
         Check 'ML base build'
     }
@@ -84,15 +109,17 @@ foreach ($key in $keys) {
     if ([string]::IsNullOrWhiteSpace($value)) { throw "Set $key first. See docs/kubeflow-setup.md." }
     $data[$key] = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value))
 }
-docker network inspect minikube *> $null
-Check 'Minikube Docker network lookup'
-minikube -p minikube image load $runtime --daemon
+if (-not (Test-Native { docker network inspect $Profile })) {
+    throw "No Docker network named '$Profile'. Start the cluster first: minikube start -p $Profile --driver=docker"
+}
+minikube -p $Profile image load $runtime --daemon
 Check 'Minikube image load'
 $secret = @{apiVersion='v1'; kind='Secret'; type='Opaque'; metadata=@{name='credit-risk-phase5';namespace='kubeflow'}; data=$data}
 ($secret | ConvertTo-Json -Compress -Depth 5) | kubectl @k apply --server-side --field-manager=phase5-setup -f -
 Check 'KFP runtime secret'
 kubectl @k apply -f pipelines/airflow/kfp-access.yaml
 Check 'Airflow access service'
+$env:PHASE5_PROFILE = $Profile   # compose uses it for the cluster host name and Docker network
 docker compose -f pipelines/airflow/compose.yaml up -d
 Check 'Airflow startup'
 Write-Output 'Airflow UI: http://localhost:8085. From the repository root, open docs/orchestration.md for the first run.'

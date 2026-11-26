@@ -1,0 +1,11 @@
+# Voluntary disruptions (node drain, upgrades) may never take the last serving API pod.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+  namespace: credit-risk
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api

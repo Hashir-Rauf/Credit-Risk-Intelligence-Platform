@@ -13,3 +13,9 @@ services:
   prometheus:
     ports:
       - "127.0.0.1:9090:9090"
+  alertmanager:
+    ports:
+      - "127.0.0.1:9093:9093"
+  monitor:
+    ports:
+      - "127.0.0.1:9101:9101"

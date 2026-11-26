@@ -7,6 +7,10 @@ from src.common.config import load_params
 from src.models.tracking import experiment_name, registry_model_name
 
 
+class GateRejected(RuntimeError):
+    """The evaluated model did not pass the quality gate. A normal, deterministic outcome."""
+
+
 def check_result(request, smoke):
     if not re.fullmatch(r"[0-9a-f]{32}", request):
         raise ValueError("Invalid orchestration request ID")
@@ -21,7 +25,7 @@ def check_result(request, smoke):
     run = runs[0]
     tags = run.data.tags
     if tags.get("gate_passed") != "true":
-        raise RuntimeError(f"Quality gate rejected training run {run.info.run_id}")
+        raise GateRejected(f"Quality gate rejected training run {run.info.run_id}")
     version = client.get_model_version(
         registry_model_name(params, smoke), tags["phase5_staging_version"]
     )

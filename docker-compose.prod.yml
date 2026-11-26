@@ -11,6 +11,7 @@ services:
     cpus: 1.0
     environment:
       LOG_LEVEL: INFO
+      RATE_LIMIT_PER_MINUTE: "600" # per client address; the frontend server counts as one client
   frontend:
     read_only: true
     tmpfs: [/tmp, /app/.next/cache]
@@ -21,6 +22,21 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     mem_limit: 1g
+  monitor:
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 768m
+  alertmanager:
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+  alert-sink:
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 128m
   prometheus:
     security_opt: ["no-new-privileges:true"]
     mem_limit: 512m

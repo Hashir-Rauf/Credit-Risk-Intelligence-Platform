@@ -1,0 +1,15 @@
+# Non-secret settings for the API. The API key is NOT here: it lives in the Secret `api-secret`, which
+# scripts/k8s_demo.sh creates from a random value (or `kubectl create secret generic api-secret --from-literal=...`).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: credit-risk
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: credit-risk
+data:
+  LOG_LEVEL: INFO
+  MODEL_PATH: models/model.joblib
+  MAX_BATCH: "100"
+  MAX_BODY_BYTES: "1000000"

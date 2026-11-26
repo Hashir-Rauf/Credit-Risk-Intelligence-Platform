@@ -1,0 +1,144 @@
+# Prometheus for the Kubernetes deployment: discovers the API pods through the Kubernetes API (pods annotated
+# prometheus.io/scrape=true in k8s/api-deployment.yaml) and evaluates the same alert rules as the Compose stack.
+#
+#   kubectl -n credit-risk create configmap prometheus-rules --from-file=alert_rules.yml=monitoring/alert_rules.yml \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl apply -f k8s/monitoring/prometheus.yaml
+#   kubectl -n credit-risk port-forward svc/prometheus 9090:9090
+#
+# Alertmanager is not deployed here; add one (or point `alerting` at the Compose one) when notifications are needed.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: credit-risk
+automountServiceAccountToken: true # Prometheus needs the token to call the Kubernetes API for discovery
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-discovery
+  namespace: credit-risk
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-discovery
+  namespace: credit-risk
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-discovery
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: credit-risk
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: credit-risk
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    rule_files:
+      - /etc/prometheus-rules/alert_rules.yml
+    scrape_configs:
+      - job_name: credit-risk-api-pods
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [credit-risk]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: credit-risk
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.retention.time=2d
+            - --storage.tsdb.path=/prometheus
+          ports:
+            - name: http
+              containerPort: 9090
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus}
+            - {name: rules, mountPath: /etc/prometheus-rules}
+            - {name: data, mountPath: /prometheus}
+      volumes:
+        - name: config
+          configMap: {name: prometheus-config}
+        - name: rules
+          configMap: {name: prometheus-rules}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: credit-risk
+spec:
+  selector:
+    app.kubernetes.io/name: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http

@@ -1,0 +1,16 @@
+retrain_dag run retrain-drift-acceptance (conf: source=uci, reason=drift), task states:
+   poll_run           success
+   fetch_data         success
+   validate           success
+   dvc_push           success
+   trigger_kfp_run    success
+   decide             success
+   route              success
+   request_approval   skipped
+   record_rejection   success
+
+
+decide / record_rejection log lines:
+[2026-11-26T16:33:50.102+0000] {orchestration_common.py:62} INFO - [decision] Gate passed. MLflow run d8886d9d7d5a443792a5d616e0bbb349, model credit-risk-default-model v6
+[2026-11-26T16:33:50.102+0000] {orchestration_common.py:62} INFO - [decision] Challenger v6 vs champion v1: REJECTED. ROC-AUC gain +0.0000 is below the required +0.0050; fairness gaps were not re-evaluated in the DAG (the test split lives in the Kubeflow pods): check reports/fairness.json for the candidate before approving
+[2026-11-26T16:33:56.570+0000] {orchestration_common.py:22} INFO - Challenger v6 REJECTED, champion v1 keeps serving: ROC-AUC gain +0.0000 is below the required +0.0050; fairness gaps were not re-evaluated in the DAG (the test split lives in the Kubeflow pods): check reports/fairness.json for the candidate before approving

@@ -233,17 +233,17 @@ Assumes ~8 weeks; compress or stretch as needed. Each phase ends with something 
 | Rubric: Feast, BentoML, security scanning | Phases 2, 4, 3 |
 
 ### Minimum acceptance checklist (spec §9)
-- [ ] Reproducible training pipeline
-- [ ] Data/code versions identifiable and recoverable
-- [ ] Experiments/metrics in MLflow
-- [ ] Tests run in GitHub Actions
-- [ ] Quality-gate failure prevents deployment
-- [ ] Flask API in Docker
-- [ ] Deployed on AWS and serves a prediction
-- [ ] Kubernetes deployment + scaling demonstrated
-- [ ] Airflow + Kubeflow documented and demonstrated
-- [ ] Grafana + Prometheus working, one alert shown, retraining triggered, candidate eval + promotion + rollback shown, security implemented
-- [ ] Someone else can reproduce from README
+- [x] Reproducible training pipeline (`dvc repro`; same metrics on a second machine, docs/reviews/phase-2-review.md)
+- [x] Data/code versions identifiable and recoverable (DVC md5 + git SHA on every MLflow run and in `/model-info`)
+- [x] Experiments/metrics in MLflow (DagsHub)
+- [x] Tests run in GitHub Actions (docs/ci.md)
+- [ ] Quality-gate failure prevents deployment: demonstrated for training/registration (docs/evidence/phase-5) and enforced in `deploy.yml`; the *deployment-blocked* run on AWS is **not yet shown**
+- [x] Flask API in Docker (docs/evidence/phase-4)
+- [ ] Deployed on AWS and serves a prediction: code and docs written (docs/aws-deployment.md), **not yet run**
+- [x] Kubernetes deployment + scaling demonstrated (docs/evidence/phase-7)
+- [x] Airflow + Kubeflow documented and demonstrated (docs/evidence/phase-5)
+- [ ] Grafana + Prometheus working [x], one alert shown [x], retraining triggered [x], candidate eval [x] + promotion [ ] + rollback [ ] shown (promotion/rollback workflows written, not yet run), security implemented [x] (docs/security.md); see docs/evidence/phase-8
+- [ ] Someone else can reproduce from README: README rewritten; a **non-author fresh-machine run is still needed**
 
 ---
 

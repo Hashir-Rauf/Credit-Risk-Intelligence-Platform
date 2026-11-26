@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -14,6 +15,9 @@ from src.common.seed import derive_seed
 from src.data import ingestion, synthetic, validation
 
 from pipelines.phase5.snapshot import publish
+
+VALIDATION_FAILED = 2  # exit codes shared with the S1 stage CLIs and the DAG
+GATE_REJECTED = 3
 
 
 def fetch(work, mode):
@@ -64,14 +68,26 @@ def main():
     if args.action == "fetch":
         fetch(work, args.mode)
     elif args.action == "validate":
-        validate(work)
+        try:
+            validate(work)
+        except validation.DataValidationError as error:
+            # Same exit code as the other stage CLIs (docs/contracts-s1.md). Bad data is
+            # deterministic, so the DAG fails this task without retrying. The text keeps the
+            # class name for log searches.
+            print(f"DataValidationError: {error}", file=sys.stderr)
+            sys.exit(VALIDATION_FAILED)
     elif args.action == "push":
         descriptor = publish(work / "raw.csv", work / "validation.json", args.mode)
         (work / "snapshot.json").write_text(json.dumps(descriptor))
     else:
-        from pipelines.phase5.result import check_result
+        from pipelines.phase5.result import GateRejected, check_result
 
-        check_result(work.name, args.mode == "synthetic")
+        try:
+            check_result(work.name, args.mode == "synthetic")
+        except GateRejected as error:
+            # A rejected model is a decision, not a failure: exit 3 (gate_failed in the contract).
+            print(f"GateRejected: {error}", file=sys.stderr)
+            sys.exit(GATE_REJECTED)
 
 
 if __name__ == "__main__":

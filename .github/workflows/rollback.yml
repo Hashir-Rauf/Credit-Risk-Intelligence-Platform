@@ -1,0 +1,43 @@
+# Manual rollback: point the ECS service at an earlier task-definition revision and smoke-test it.
+# Uses the same `production` Environment (required reviewer) and OIDC role as deploy.yml.
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Revision to run: "previous", a revision number, or an image tag (git SHA)'
+        required: true
+        default: previous
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Roll the service back
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Assume the deploy role (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-rollback-${{ github.run_id }}
+      - name: Roll back and smoke test
+        env:
+          SG_ID: ${{ vars.AWS_SERVICE_SG_ID }}
+          TARGET: ${{ inputs.target }}
+        run: scripts/aws_rollback.sh "$TARGET"

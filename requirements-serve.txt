@@ -16,3 +16,4 @@ pyyaml
 shap
 prometheus-client
 python-json-logger
+boto3  # S3 export of the prediction log (PREDICTION_LOG_S3_URI)

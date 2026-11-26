@@ -1,0 +1,149 @@
+# CD: after CI passes on `main`, build the image with the model baked in, scan it, push it to ECR tagged with the
+# git SHA, register a new ECS task-definition revision, deploy, wait for it to be stable and smoke-test it.
+# A failed smoke test rolls the service back to the previous revision.
+#
+# - No AWS keys are stored: the job assumes a role through GitHub's OIDC token (infra/aws/cloudformation/service.yaml).
+# - The job runs in the GitHub Environment `production`: configure a required reviewer and "deployment branches:
+#   main only" there. That makes promotion a manual gate and is what the role's trust policy keys on.
+# - If CI fails (including the model quality gate tests), this workflow never starts a deployment.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: "Commit on main to deploy (default: the tip of main)"
+        required: false
+        default: ""
+      model_version:
+        description: >-
+          Registered model version to deploy and make champion (promotion, or rollback to an earlier champion).
+          Empty = the model tracked in git (DVC).
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: credit-risk-api
+
+jobs:
+  deploy:
+    name: Build, scan, push, deploy
+    # Only after a successful CI run on main (or a manual dispatch, which still passes the environment gate).
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    permissions:
+      contents: read
+      id-token: write # request the OIDC token for AWS
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.git_ref || 'main' }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Assume the deploy role (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-deploy-${{ github.run_id }}
+
+      - name: Check that the requested model version may be promoted
+        if: inputs.model_version != ''
+        env:
+          MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+          MODEL_VERSION_INPUT: ${{ inputs.model_version }}
+        run: |
+          pip install -c requirements.lock.txt mlflow-skinny
+          python -m pipelines.retrain.promote_alias --check --version "$MODEL_VERSION_INPUT"
+
+      - name: Fetch the registered model version (promotion or rollback)
+        if: inputs.model_version != ''
+        env:
+          MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+          MODEL_VERSION_INPUT: ${{ inputs.model_version }}
+        run: |
+          pip install -c requirements.lock.txt "dvc[s3]" mlflow-skinny
+          python -m pipelines.retrain.fetch_model --version "$MODEL_VERSION_INPUT"
+          dvc pull -r s3 models/explainer_background.parquet   # not part of the model package
+
+      - name: Pull the model files from the DVC remote
+        if: inputs.model_version == ''
+        run: |
+          pip install -c requirements.lock.txt "dvc[s3]"
+          dvc pull -r s3 models/model.joblib models/explainer_background.parquet
+          test -s models/model.joblib
+
+      - name: Refuse to deploy a model that did not pass its quality gate
+        run: jq -e '.gate.passed == true' reports/evaluation.json
+
+      - name: Work out the image tag
+        id: meta
+        run: |
+          sha="$(git rev-parse HEAD)"
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          registry="${account}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "image=$registry/$ECR_REPOSITORY:$sha" >> "$GITHUB_OUTPUT"
+          echo "model_version=$(jq -r '.version' reports/registration.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Build the image (model baked in)
+        run: >
+          docker build -f docker/Dockerfile.api --target with-model
+          --build-arg GIT_SHA=${{ steps.meta.outputs.sha }}
+          --build-arg MODEL_VERSION=${{ steps.meta.outputs.model_version }}
+          -t ${{ steps.meta.outputs.image }} .
+
+      - name: Trivy scan (HIGH and CRITICAL with a fix available fail the deployment)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push to ECR
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin "${{ steps.meta.outputs.registry }}"
+          docker push "${{ steps.meta.outputs.image }}"
+          aws ecr list-images --repository-name "$ECR_REPOSITORY" --query 'imageIds[].imageTag' --output text
+
+      - name: Deploy, wait for stability, smoke test (rolls back on failure)
+        env:
+          SG_ID: ${{ vars.AWS_SERVICE_SG_ID }}
+        run: >
+          scripts/aws_ecs_deploy.sh "${{ steps.meta.outputs.image }}"
+          "${{ steps.meta.outputs.model_version }}" "${{ steps.meta.outputs.sha }}"
+
+      # Only now, with the new model serving and smoke-tested, does the registry say so. A failed deployment
+      # (rolled back above) therefore never leaves `champion` pointing at a model that is not running.
+      - name: Move the champion alias to the deployed version
+        if: inputs.model_version != ''
+        env:
+          MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+          MODEL_VERSION_INPUT: ${{ inputs.model_version }}
+        run: python -m pipelines.retrain.promote_alias --apply --version "$MODEL_VERSION_INPUT" | tee -a "$GITHUB_STEP_SUMMARY"
