@@ -11,6 +11,7 @@ eni="$(aws ecs describe-tasks --cluster credit-risk --tasks "$task" \
 ip="$(aws ec2 describe-network-interfaces --network-interface-ids "$eni" \
   --query 'NetworkInterfaces[0].Association.PublicIp' --output text)"
 echo "http://$ip:8000"
+echo "frontend: http://$ip:3000 (when deployed)" >&2
 if [ "${1:-}" = "--key" ]; then
   aws secretsmanager get-secret-value --secret-id credit-risk-api/api-key --query SecretString --output text
 fi

@@ -36,6 +36,7 @@ concurrency:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ECR_REPOSITORY: credit-risk-api
+  FRONTEND_ECR_REPOSITORY: credit-risk-frontend
 
 jobs:
   deploy:
@@ -107,6 +108,7 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "registry=$registry" >> "$GITHUB_OUTPUT"
           echo "image=$registry/$ECR_REPOSITORY:$sha" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=$registry/$FRONTEND_ECR_REPOSITORY:$sha" >> "$GITHUB_OUTPUT"
           echo "model_version=$(jq -r '.version' reports/registration.json)" >> "$GITHUB_OUTPUT"
 
       - name: Build the image (model baked in)
@@ -116,6 +118,9 @@ jobs:
           --build-arg MODEL_VERSION=${{ steps.meta.outputs.model_version }}
           -t ${{ steps.meta.outputs.image }} .
 
+      - name: Build the frontend image
+        run: docker build -t ${{ steps.meta.outputs.frontend_image }} frontend
+
       - name: Trivy scan (HIGH and CRITICAL with a fix available fail the deployment)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -124,10 +129,19 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Trivy scan of the frontend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.frontend_image }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
       - name: Push to ECR
         run: |
           aws ecr get-login-password | docker login --username AWS --password-stdin "${{ steps.meta.outputs.registry }}"
           docker push "${{ steps.meta.outputs.image }}"
+          docker push "${{ steps.meta.outputs.frontend_image }}"
           # Confirm the exact tag exists (DescribeImages is allowed for the deploy role; ListImages is not).
           aws ecr describe-images --repository-name "$ECR_REPOSITORY"             --image-ids imageTag="${{ steps.meta.outputs.sha }}" --query 'imageDetails[0].imageDigest' --output text
 
@@ -137,6 +151,7 @@ jobs:
         run: >
           scripts/aws_ecs_deploy.sh "${{ steps.meta.outputs.image }}"
           "${{ steps.meta.outputs.model_version }}" "${{ steps.meta.outputs.sha }}"
+          "${{ steps.meta.outputs.frontend_image }}"
 
       # Only now, with the new model serving and smoke-tested, does the registry say so. A failed deployment
       # (rolled back above) therefore never leaves `champion` pointing at a model that is not running.

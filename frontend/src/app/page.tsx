@@ -15,6 +15,27 @@ export default async function ScorePage() {
         Enter a customer&apos;s account, repayment and billing history. The model returns a risk score and the factors that
         moved it. Everything here goes through the server, which holds the API key.
       </p>
+      <div className="stats" aria-label="Service summary">
+        <div className="stat">
+          <span className="stat-label">Service</span>
+          <span className="stat-value">
+            <span className={`status-dot ${info.status === 200 ? "ok" : "bad"}`} aria-hidden="true" />
+            {info.status === 200 ? "Online" : "Unavailable"}
+          </span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Model version</span>
+          <span className="stat-value">{info.status === 200 ? (body.model_version ?? "unknown") : "none"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Decision threshold</span>
+          <span className="stat-value">{body.threshold !== undefined ? body.threshold : "n/a"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Model inputs</span>
+          <span className="stat-value">{body.inputs ? body.inputs.length : "n/a"}</span>
+        </div>
+      </div>
       {info.status === 200 && body.inputs && body.threshold !== undefined ? (
         <ScoreForm inputs={body.inputs} threshold={body.threshold} modelVersion={body.model_version ?? "unknown"} />
       ) : (
