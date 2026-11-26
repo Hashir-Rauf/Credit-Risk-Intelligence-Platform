@@ -50,6 +50,7 @@ All policies are written inline in [`service.yaml`](../infra/aws/cloudformation/
 | **GitHub deploy role** (`credit-risk-github-deploy`) | push to the one ECR repository; register task definitions (no resource-level permission exists); update **only** the service `credit-risk/credit-risk-api`; `iam:PassRole` for **only** the two roles above and only to `ecs-tasks.amazonaws.com`; read the one secret (smoke test); add/remove one ingress rule on the one security group (the runner's address, during the smoke test); read DVC remote objects under `dvc/` | create or delete clusters, roles, buckets; touch other services |
 
 **Trust:** only OIDC tokens issued for `repo:Hashir-Rauf/Credit-Risk-Intelligence-Platform:environment:production`, audience `sts.amazonaws.com`.
+GitHub now puts the numeric owner and repository IDs into the subject (`repo:Hashir-Rauf@172579469/Credit-Risk-Intelligence-Platform@1447265046:environment:production`); the first live run failed with `AccessDenied` until the role trusted that form (found by reading the subject in CloudTrail). The template takes `GitHubOwnerId` and `GitHubRepoId` and accepts both forms.
 Jobs that run in a GitHub Environment present the *environment* as their subject, not a branch. So the branch restriction is enforced on the
 Environment itself (below): a job can only run in `production` if the workflow ran from `main`.
 

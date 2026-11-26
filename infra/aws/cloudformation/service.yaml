@@ -16,6 +16,14 @@ Parameters:
   GitHubRepo:
     Type: String
     Default: Hashir-Rauf/Credit-Risk-Intelligence-Platform
+  GitHubOwnerId:
+    Type: String
+    Default: "172579469"
+    Description: Numeric ID of the GitHub owner (the `Owner@<id>` part of the OIDC subject). `gh api users/<owner> --jq .id`.
+  GitHubRepoId:
+    Type: String
+    Default: "1447265046"
+    Description: Numeric ID of the repository (the `Repo@<id>` part of the OIDC subject). `gh api repos/<owner>/<repo> --jq .id`.
   GitHubEnvironment:
     Type: String
     Default: production
@@ -235,7 +243,15 @@ Resources:
                 "token.actions.githubusercontent.com:aud": sts.amazonaws.com
                 # Jobs that use a GitHub Environment present this subject, not a branch ref. The Environment
                 # itself is limited to `main` (see docs/aws-deployment.md).
-                "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+                # GitHub now puts the numeric owner and repository IDs into the subject
+                # (repo:Owner@<ownerId>/Repo@<repoId>:environment:<env>); the plain form is kept for tokens
+                # issued without them. Both name exactly one repository and one Environment.
+                "token.actions.githubusercontent.com:sub":
+                  - !Sub
+                    - "repo:${Owner}@${GitHubOwnerId}/${Name}@${GitHubRepoId}:environment:${GitHubEnvironment}"
+                    - Owner: !Select [0, !Split ["/", !Ref GitHubRepo]]
+                      Name: !Select [1, !Split ["/", !Ref GitHubRepo]]
+                  - !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
       Policies:
         - PolicyName: build-push-and-deploy-the-one-service
           PolicyDocument:
