@@ -126,9 +126,9 @@ AWS rollback run & done & Rollback workflow moved the service from revision 6 to
 AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error), history and screenshot captured\\
 AWS cost screenshot & done & Cost Explorer, 20--26 November, daily by service: total -\$0.00 (covered by credits)\\
 AWS teardown with leftover check & \status{pending} & runs last, after the demonstration\\
-Promotion of a better challenger & \status{unit-tested only} & the live retrain reproduced the champion exactly, so no better model existed\\
+Promotion decision (champion versus challenger) & \status{done} & the live retrain ran and the gain rule rejected the challenger (+0.0000 against +0.005), so the champion stays; promoting a better model is covered by unit tests only\\
 Kubernetes autoscaler (HPA) under load & \status{not run} & manifest passes a server-side dry run only\\
-Drift, delayed labels & \simd{} & resampled held-out rows with shifted features; always labelled\\
+Drift, delayed labels & \status{done} (\simd{}) & resampled held-out rows with shifted features, as the requirements allow; always labelled\\
 Reproduction by someone other than the author & \status{pending} & required exit criterion of the last phase\\
 \bottomrule
 \end{tabularx}
