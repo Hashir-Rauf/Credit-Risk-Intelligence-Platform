@@ -3,13 +3,8 @@
 Run these in order after the two pending PRs are merged. Each step says what to click and what to screenshot. Save images in
 `docs/evidence/phase-6/screenshots/` with the names given.
 
-## 1. Blocked deployment (failed quality gate)
-The branch `demo/failing-gate` holds one commit (7ea957c) whose `reports/evaluation.json` says `gate.passed: false`. It is never merged.
-1. GitHub > Actions > **Deploy** > Run workflow. Branch `main`, `git_ref` = `7ea957c6050e4e1b44ffc11b8fad7cc21517d558`, `model_version` empty.
-2. Approve the `production` environment prompt.
-3. Expected: the job fails at **Refuse to deploy a model that did not pass its quality gate**; nothing is built or pushed and the service keeps its revision.
-4. Screenshot: the failed run page with that step red (`gate-blocked-deploy.png`). Confirm in ECS that the revision number did not change.
-5. Afterwards delete the branch: `git push origin --delete demo/failing-gate`.
+## 1. Blocked deployment: dropped
+Not run on AWS (decision 2026-11-27). The `demo/failing-gate` branch can be deleted: `git push origin --delete demo/failing-gate`.
 
 ## 2. Rollback to the previous revision
 1. Note the current revision (ECS > Clusters > credit-risk > credit-risk-api > Deployments) and the frontend address (`./infra/aws/endpoint.sh`).

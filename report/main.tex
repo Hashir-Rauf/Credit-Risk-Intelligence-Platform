@@ -117,7 +117,9 @@ The project predicts whether a credit-card customer will default in the next mon
 \midrule
 Data, DVC, modelling, CI, serving, orchestration & done & evidence in Sections~\ref{sec:data}--\ref{sec:pipelines}\\
 AWS deployment (API + web UI) & done & ECS Fargate, task definition rev.\ 5, deployed by the CD workflow\\
-AWS rollback run, blocked-deployment run, alarm firing, cost screenshot, teardown & \status{pending} & code written and statically validated; to be run and captured\\
+AWS rollback run & done & Rollback workflow moved the service from revision 6 to 5 and the smoke test passed\
+AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error)\
+AWS cost screenshot, teardown & \status{pending} & to be captured; teardown runs last\\
 Promotion of a better challenger & \status{unit-tested only} & the live retrain reproduced the champion exactly, so no better model existed\\
 Kubernetes autoscaler (HPA) under load & \status{not run} & manifest passes a server-side dry run only\\
 Drift, delayed labels & \simd{} & resampled held-out rows with shifted features; always labelled\\
@@ -504,7 +506,7 @@ Page unreachable after an ISP change & the security group allowed only the opera
 The smallest sizes are used: about \$0.60 per day while the task runs (0.5\,vCPU, 1\,GB and a public IPv4 address), taken from the credits on the Free plan; an AWS budget exists in the Billing console. The resources are removed after the demonstration (Section~\ref{sec:cleanup}).
 
 \subsection{Not yet demonstrated on AWS}
-The Rollback workflow run, a Deploy run blocked by a failing quality gate, an alarm firing on AWS, the Cost Explorer view and the teardown with its leftover check are written and statically validated but have not been captured yet. They are tracked in the status table (Section~\ref{sec:summary}).
+The Cost Explorer view and the teardown with its leftover check have not been captured yet. A Deploy run blocked by a failing quality gate was not run on AWS; the gate itself is checked in CI and by the first step of the Deploy job. The alarm was put into the ALARM state by a manual state change (\code{set-alarm-state}), not by a real HTTP 5xx; the metric filter and threshold were not exercised by traffic. They are tracked in the status table (Section~\ref{sec:summary}).
 
 % =====================================================================================================
 \section{Kubernetes deployment and scaling}
