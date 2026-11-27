@@ -124,7 +124,8 @@ Data, DVC, modelling, CI, serving, orchestration & done & evidence in Sections~\
 AWS deployment (API + web UI) & done & ECS Fargate, task definition rev.\ 5, deployed by the CD workflow\\
 AWS rollback run & done & Rollback workflow moved the service from revision 6 to 5 and the smoke test passed\\
 AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error), history and screenshot captured\\
-AWS cost screenshot, teardown & \status{pending} & to be captured; teardown runs last\\
+AWS cost screenshot & done & Cost Explorer, 20--26 November, daily by service: total -\$0.00 (covered by credits)\\
+AWS teardown with leftover check & \status{pending} & runs last, after the demonstration\\
 Promotion of a better challenger & \status{unit-tested only} & the live retrain reproduced the champion exactly, so no better model existed\\
 Kubernetes autoscaler (HPA) under load & \status{not run} & manifest passes a server-side dry run only\\
 Drift, delayed labels & \simd{} & resampled held-out rows with shifted features; always labelled\\
@@ -524,10 +525,16 @@ Page unreachable after an ISP change & the security group allowed only the opera
 \end{longtable}
 
 \subsection{Cost}
-The smallest sizes are used: about \$0.60 per day while the task runs (0.5\,vCPU, 1\,GB and a public IPv4 address), taken from the credits on the Free plan; an AWS budget exists in the Billing console. The resources are removed after the demonstration (Section~\ref{sec:cleanup}).
+The smallest sizes are used: about \$0.60 per day while the task runs (0.5\,vCPU, 1\,GB and a public IPv4 address), taken from the credits on the Free plan; an AWS budget exists in the Billing console. Cost Explorer (20--26 November, daily, grouped by service) shows a total of -\$0.00: the charges so far are offset by the credits, and billing data lags by up to a day (Figure~\ref{fig:cost}). The resources are removed after the demonstration (Section~\ref{sec:cleanup}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{phase-6/screenshots/cost-explorer.png}
+\caption{Cost Explorer for the project account, 20--26 November 2026, daily, grouped by service: total cost -\$0.00 (covered by credits); filters limit it to CloudFormation, CloudWatch and the other services in use.\label{fig:cost}}
+\end{figure}
 
 \subsection{Not yet demonstrated on AWS}
-The Cost Explorer view and the teardown with its leftover check have not been captured yet. A Deploy run blocked by a failing quality gate was not run on AWS; the gate itself is checked in CI and by the first step of the Deploy job. The alarm was put into the ALARM state by a manual state change (\code{set-alarm-state}), not by a real HTTP 5xx; the metric filter and threshold were not exercised by traffic. They are tracked in the status table (Section~\ref{sec:summary}).
+The teardown with its leftover check has not been run yet; it is done last, after the demonstration. A Deploy run blocked by a failing quality gate was not run on AWS; the gate itself is checked in CI and by the first step of the Deploy job. The alarm was put into the ALARM state by a manual state change (\code{set-alarm-state}), not by a real HTTP 5xx; the metric filter and threshold were not exercised by traffic. They are tracked in the status table (Section~\ref{sec:summary}).
 
 % =====================================================================================================
 \section{Kubernetes deployment and scaling}
