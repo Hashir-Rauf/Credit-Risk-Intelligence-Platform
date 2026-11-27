@@ -117,8 +117,8 @@ The project predicts whether a credit-card customer will default in the next mon
 \midrule
 Data, DVC, modelling, CI, serving, orchestration & done & evidence in Sections~\ref{sec:data}--\ref{sec:pipelines}\\
 AWS deployment (API + web UI) & done & ECS Fargate, task definition rev.\ 5, deployed by the CD workflow\\
-AWS rollback run & done & Rollback workflow moved the service from revision 6 to 5 and the smoke test passed\
-AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error)\
+AWS rollback run & done & Rollback workflow moved the service from revision 6 to 5 and the smoke test passed\\
+AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error)\\
 AWS cost screenshot, teardown & \status{pending} & to be captured; teardown runs last\\
 Promotion of a better challenger & \status{unit-tested only} & the live retrain reproduced the champion exactly, so no better model existed\\
 Kubernetes autoscaler (HPA) under load & \status{not run} & manifest passes a server-side dry run only\\
@@ -487,6 +487,14 @@ containers   api: RUNNING   frontend: RUNNING
 images       credit-risk-api:<git-sha>   credit-risk-frontend:<git-sha>   (same commit)
 alarms       credit-risk-api-5xx: OK   credit-risk-api-p95-latency: OK
 \end{lstlisting}
+
+\subsection{Rollback run}
+The Rollback workflow was run with target \code{previous}. It moved the service from task-definition revision 6 to revision 5, waited for the service to be stable and ran the same smoke test as a deployment: \code{/health} answered, a prediction without the key was rejected, a prediction with the key succeeded and the web UI answered.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{phase-6/screenshots/rollback-run.png}
+\caption{Rollback \#1 (GitHub Actions): current revision 6, rolling back to revision 5, then the smoke test passes.}
+\end{figure}
 
 \subsection{Problems the live deployment found (all fixed)}
 \begin{longtable}{L{5.4cm}L{8.6cm}}
