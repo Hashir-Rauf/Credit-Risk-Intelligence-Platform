@@ -1,6 +1,6 @@
 # Credit Risk Intelligence Platform: project report
 
-FAST-NUCES, MLOps (Semester 7). A coursework system that predicts next-month credit-card default, then serves, monitors and retrains the model.
+FAST-NUCES, MLOps (Semester 7). Group 14: Hashir Rauf (23L-2572), Junaid Minhas (23L-2559), Ahsan Ijaz (23L-2617). A coursework system that predicts next-month credit-card default, then serves, monitors and retrains the model.
 It is **not** a lending tool; every interface says so.
 
 > The formatted final report with all metrics and screenshots is [report/main.tex](report/main.tex) (build: [report/README.md](report/README.md)).

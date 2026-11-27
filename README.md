@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform/actions/workflows/ci.yml)
 
-End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project (3 students). **A coursework system, not a lending tool.**
+End-to-end MLOps system that predicts next-month credit-card default, then serves, monitors and retrains the model. FAST-NUCES MLOps course project, **Group 14**: Hashir Rauf (23L-2572), Junaid Minhas (23L-2559), Ahsan Ijaz (23L-2617). **A coursework system, not a lending tool.**
 
 ![architecture](docs/diagrams/architecture.png)
 

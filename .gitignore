@@ -226,3 +226,7 @@ graphify-out/
 
 # built final report (attach to the submission; sources are report/main.tex)
 report/*.pdf
+
+# assembled submission folder and archive (build artefacts)
+submission/
+submission.zip

@@ -78,11 +78,16 @@
 {\color{blue}\rule{0.5\linewidth}{1pt}}\\[1.0cm]
 {\large\bfseries Final project report}\\[0.3cm]
 FAST-NUCES \quad|\quad MLOps \quad|\quad Semester 7\\[1.6cm]
-\begin{tabular}{rl}
-\hdr{S1} & Data \& ML engineering (\texttt{@JA-Codex})\\
-\hdr{S2} & MLOps \& automation: pipelines, CI/CD, serving, cloud (Hashir Rauf, \texttt{@Hashir-Rauf})\\
-\hdr{S3} & Deployment \& reliability\\
-\end{tabular}\\[1.4cm]
+{\large\bfseries Group 14}\\[0.3cm]
+\begin{tabular}{ll}
+\toprule
+\hdr{Name} & \hdr{Roll number}\\
+\midrule
+Hashir Rauf & 23L-2572\\
+Junaid Minhas & 23L-2559\\
+Ahsan Ijaz & 23L-2617\\
+\bottomrule
+\end{tabular}\\[1.2cm]
 {\normalsize Repository: \url{https://github.com/Hashir-Rauf/Credit-Risk-Intelligence-Platform}}\\[0.3cm]
 {\normalsize 27 November 2026}\\[1.5cm]
 \fcolorbox{ruleblue}{paleblue}{\parbox{0.85\linewidth}{\small
@@ -118,7 +123,7 @@ The project predicts whether a credit-card customer will default in the next mon
 Data, DVC, modelling, CI, serving, orchestration & done & evidence in Sections~\ref{sec:data}--\ref{sec:pipelines}\\
 AWS deployment (API + web UI) & done & ECS Fargate, task definition rev.\ 5, deployed by the CD workflow\\
 AWS rollback run & done & Rollback workflow moved the service from revision 6 to 5 and the smoke test passed\\
-AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error)\\
+AWS alarm firing & done & 5xx alarm set to ALARM by a manual state change (not by a real error), history and screenshot captured\\
 AWS cost screenshot, teardown & \status{pending} & to be captured; teardown runs last\\
 Promotion of a better challenger & \status{unit-tested only} & the live retrain reproduced the champion exactly, so no better model existed\\
 Kubernetes autoscaler (HPA) under load & \status{not run} & manifest passes a server-side dry run only\\
@@ -494,6 +499,14 @@ The Rollback workflow was run with target \code{previous}. It moved the service 
 \centering
 \includegraphics[width=\linewidth]{phase-6/screenshots/rollback-run.png}
 \caption{Rollback \#1 (GitHub Actions): current revision 6, rolling back to revision 5, then the smoke test passes.}
+\end{figure}
+
+\subsection{Alarm}
+The 5xx alarm was put into the ALARM state with a manual state change (\code{aws cloudwatch set-alarm-state}), because the service does not produce HTTP 5xx on purpose; the metric filter and threshold were therefore not exercised by traffic. The alarm history shows the transition and the automatic return to OK at the next evaluation: \code{OK -> ALARM} at 14:59:30 and \code{ALARM -> OK} at 15:00:02 (UTC+5, 27 November). The e-mail notification was not received because the SNS subscription was still pending confirmation.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{phase-6/screenshots/cloudwatch-alarms.png}
+\caption{CloudWatch alarms after the test: both alarms are OK; the 5xx alarm's last state update (10:00:02 UTC) is its return from the manual ALARM.}
 \end{figure}
 
 \subsection{Problems the live deployment found (all fixed)}
