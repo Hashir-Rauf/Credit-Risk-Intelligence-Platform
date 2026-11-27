@@ -1,7 +1,7 @@
 {
   "gate": {
     "metric": "roc_auc",
-    "passed": true,
+    "passed": false,
     "threshold": 0.77,
     "value": 0.7883450182006565
   },
