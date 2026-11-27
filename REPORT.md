@@ -78,6 +78,6 @@ Contributions are taken from the Git history (`git shortlog`) and the ownership 
 |---|---|
 | **S2 / `@Hashir-Rauf`** | Repository governance and CI/CD (Phases 0, 3); data ingestion and validation; Flask API, Docker images, Compose stacks and the Next.js UI (Phase 4); Airflow acceptance runs and fixes (Phase 5); AWS infrastructure, deploy and rollback workflows (Phase 6); Kubernetes manifests and demo (Phase 7); monitoring, prediction log, drift monitor, retrain DAG, promotion workflow (Phase 8); security audit, risk assessment, documentation (Phase 9). Most commits in the history. |
 | **S1 / Junaid Minhas (`@JA-Codex`)** | Modelling: features, Feast, tuning, training, evaluation, fairness, explanations, simulated drift scenarios and the promotion rules (`src/features`, `src/models`, `src/common`, `configs`, `feature_repo`, notebooks, the modelling tests). Phase 5 (Airflow/Kubeflow) was merged through PR #9 and then verified and fixed by `@Hashir-Rauf` in the acceptance runs; check `git log` for the exact split. |
-| **S3 / Ahsan Ijaz** | |
+| **S3 / Ahsan Ijaz** | Reviews and project coordination; no code in the repository (recorded in `memory.md`). |
 
 The AI coding assistant used for parts of the implementation did not author any commit; all commits are made under the team members' own identities, as `rules.md` §11 requires.
