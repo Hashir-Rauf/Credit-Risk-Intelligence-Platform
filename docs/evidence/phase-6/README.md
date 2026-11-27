@@ -35,3 +35,9 @@ Static checks done before the live run:
 | Manual rollback | `.github/workflows/rollback.yml`, `scripts/aws_rollback.sh` | YAML parse, `bash -n` |
 
 Exit criteria still to be demonstrated (checklist in the doc): merge deploys with no manual AWS clicks and no stored keys; public `curl` returns a prediction and a request without the key is rejected; a failed CI quality gate means no deployment; rollback; teardown leaves no billable resources.
+
+## Screenshots of the deployed interface (2026-11-27, from the AWS task)
+[aws-01-score-empty](screenshots/aws-01-score-empty.png), [aws-02-score-higher-risk](screenshots/aws-02-score-higher-risk.png),
+[aws-03-score-lower-risk](screenshots/aws-03-score-lower-risk.png), [aws-04-model-and-data](screenshots/aws-04-model-and-data.png)
+(shows the deployed git SHA and the test metrics), [aws-05-monitoring](screenshots/aws-05-monitoring.png),
+[aws-06-admin](screenshots/aws-06-admin.png), [aws-07-phone-width](screenshots/aws-07-phone-width.png).

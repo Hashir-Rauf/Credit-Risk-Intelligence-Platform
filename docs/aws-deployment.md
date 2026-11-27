@@ -117,6 +117,8 @@ Rough public list prices, Sydney Region, always-on: Fargate 0.25 vCPU / 0.5 GB â
 Run it for the demo only. Confirm the existing budget alert (and the spend limit in AWS Settings â†’ Billing, still unconfirmed in `memory.md`) before step 4.
 
 ## Teardown (and proof)
+The full ordered clean-up (AWS, GitHub, local, what to check afterwards) is in the README section "Clean up".
+
 ```bash
 ./infra/aws/teardown.sh --yes
 ```

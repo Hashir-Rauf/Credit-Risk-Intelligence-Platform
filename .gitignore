@@ -223,3 +223,6 @@ graphify-out/
 # ---- Evidence for grading is committed on purpose ---------------------------
 !docs/evidence/
 !docs/evidence/**
+
+# built final report (attach to the submission; sources are report/main.tex)
+report/*.pdf

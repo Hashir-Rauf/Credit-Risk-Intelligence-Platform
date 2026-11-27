@@ -51,8 +51,9 @@ echo
 echo "== what is left (everything below should be empty or 'None')"
 echo "stacks:   $(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE DELETE_FAILED --query "StackSummaries[?starts_with(StackName,'credit-risk')].StackName" --output text)"
 echo "clusters: $(aws ecs list-clusters --query "clusterArns[?contains(@, 'credit-risk')]" --output text)"
-echo "ecr:      $(aws ecr describe-repositories --query "repositories[?repositoryName=='credit-risk-api'].repositoryName" --output text 2>/dev/null || true)"
+echo "ecr:      $(aws ecr describe-repositories --query "repositories[?starts_with(repositoryName,'credit-risk')].repositoryName" --output text 2>/dev/null || true)"
 echo "secrets:  $(aws secretsmanager list-secrets --query "SecretList[?starts_with(Name,'credit-risk')].Name" --output text)"
 echo "logs:     $(aws logs describe-log-groups --log-group-name-prefix /ecs/credit-risk --query 'logGroups[].logGroupName' --output text)"
+# The DVC remote bucket (credit-risk-dvc-...) pre-dates this deployment and is NOT deleted: it holds the data needed to reproduce.
 echo "buckets:  $(aws s3api list-buckets --query "Buckets[?contains(Name,'credit-risk')].Name" --output text)"
 echo "The IAM OIDC provider for GitHub is deleted with the service stack unless it pre-existed (CREATE_OIDC_PROVIDER=false)."
