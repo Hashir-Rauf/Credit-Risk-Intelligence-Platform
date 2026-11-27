@@ -193,9 +193,9 @@ No secrets in git (pre-commit + gitleaks on full history), OIDC instead of AWS k
 ## Team
 | Member | Role |
 |---|---|
-| S1 (`@JA-Codex`) | Data & ML Engineering |
+| S1 (Junaid Minhas, `@JA-Codex`) | Data & ML Engineering |
 | S2 (`@Hashir-Rauf`) | MLOps & Automation (pipelines, CI/CD) |
-| S3 | Deployment & Reliability |
+| S3 (Ahsan Ijaz) | Deployment & Reliability |
 
 ## Contributing
 Branch from `main` (`feat/…`, `fix/…`), open a PR, get one review and green CI. Never push to `main`. See [rules.md](rules.md).
