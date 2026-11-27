@@ -7,7 +7,8 @@
 #
 # Optional: AWS_REGION (default: the CLI's configured region), CREATE_OIDC_PROVIDER=false when the account
 # already trusts GitHub Actions (then also EXISTING_OIDC_PROVIDER_ARN=<arn>), GITHUB_REPO=<owner/name>,
-# CREATE_BUDGET=true to add a budget (the project already has one).
+# CREATE_BUDGET=true to add a budget (the project already has one), FRONTEND_CIDR=<range> to open only the web
+# frontend (port 3000) to a different range than ALLOWED_CIDR (for example 0.0.0.0/0 for a deliberate public demo).
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -36,6 +37,7 @@ echo "== service stack (cluster, roles, service, alarms, GitHub deploy role)"
 aws cloudformation deploy --stack-name credit-risk-service \
   --template-file "$here/cloudformation/service.yaml" --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides VpcId="$vpc" SubnetIds="$subnets" AllowedCidr="$ALLOWED_CIDR" \
+  FrontendCidr="${FRONTEND_CIDR:-}" \
   GitHubRepo="${GITHUB_REPO:-Hashir-Rauf/Credit-Risk-Intelligence-Platform}" \
   CreateOidcProvider="${CREATE_OIDC_PROVIDER:-true}" ExistingOidcProviderArn="${EXISTING_OIDC_PROVIDER_ARN:-}" \
   --tags project=credit-risk --no-fail-on-empty-changeset

@@ -57,7 +57,7 @@ Environment itself (below): a job can only run in `production` if the workflow r
 ## Web frontend on AWS
 The Next.js frontend runs as a **second, non-essential container in the same ECS task** as the API (task size 0.5 vCPU / 1 GB), so there is one task, one public IP and no load balancer.
 * The browser talks only to the frontend (port 3000). Its server side calls the API on `127.0.0.1:8000` inside the task and attaches the API key from the same Secrets Manager secret; the key never reaches the browser.
-* Port 3000 is open to the **same single operator CIDR** as the API. The frontend holds the API key, so it must never be opened to `0.0.0.0/0`.
+* Port 3000 is open to the operator CIDR by default. The frontend holds the API key, so opening it widens who can score customers; the `FrontendCidr` parameter (`FRONTEND_CIDR=` for `setup.sh`) opens **only this port** to another range, for example `0.0.0.0/0` for a deliberate public demo (2026-11-27 it was opened that way; the API port 8000 stays on the operator range). Revert with `FRONTEND_CIDR=` empty. The API's rate limit (600 requests/minute per client) still applies.
 * Image: its own ECR repository `credit-risk-frontend` (immutable tags, created by the bootstrap stack). The Deploy workflow builds, Trivy-scans and pushes it next to the API image and `scripts/aws_ecs_deploy.sh` adds the `frontend` container when it registers the new task revision; the smoke test also checks the frontend (`/api/health` must see the API, `/` must render the form).
 * The container is non-essential: if it crashes, the scoring API keeps running (ECS restarts it).
 * `infra/aws/endpoint.sh` prints the API URL on the first line and the frontend URL on stderr.

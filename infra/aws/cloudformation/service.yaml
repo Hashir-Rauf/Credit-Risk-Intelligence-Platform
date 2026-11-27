@@ -16,6 +16,14 @@ Parameters:
   GitHubRepo:
     Type: String
     Default: Hashir-Rauf/Credit-Risk-Intelligence-Platform
+  FrontendCidr:
+    Type: String
+    Default: ""
+    Description: >-
+      Source range for the web frontend (port 3000). Empty means the same range as AllowedCidr. Use 0.0.0.0/0 only for a
+      deliberate public demo: the frontend attaches the API key server-side, so anyone who can reach it can score customers.
+      The API itself (port 8000) is never opened by this parameter.
+    AllowedPattern: "^$|^\\d{1,3}(\\.\\d{1,3}){3}/([0-9]|[12]\\d|3[0-2])$"
   GitHubOwnerId:
     Type: String
     Default: "172579469"
@@ -46,6 +54,7 @@ Parameters:
 
 Conditions:
   MakeOidcProvider: !Equals [!Ref CreateOidcProvider, "true"]
+  FrontendHasOwnCidr: !Not [!Equals [!Ref FrontendCidr, ""]]
 
 Resources:
   # ---------------------------------------------------------------- network
@@ -63,8 +72,8 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3000
           ToPort: 3000
-          CidrIp: !Ref AllowedCidr
-          Description: Web frontend, same operator range only (it holds the API key server-side, so it is never public)
+          CidrIp: !If [FrontendHasOwnCidr, !Ref FrontendCidr, !Ref AllowedCidr]
+          Description: Web frontend (operator range unless FrontendCidr says otherwise; it holds the API key server-side)
 
   # ---------------------------------------------------------------- roles
   ExecutionRole:
